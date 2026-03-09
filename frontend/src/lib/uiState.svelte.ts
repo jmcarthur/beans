@@ -39,6 +39,14 @@ class UIState {
 		localStorage.setItem('beans-planning-view', view);
 	}
 
+	// Planning chat pane (persisted to localStorage)
+	showPlanningChat = $state(false);
+
+	togglePlanningChat() {
+		this.showPlanningChat = !this.showPlanningChat;
+		localStorage.setItem('beans-planning-chat', this.showPlanningChat ? 'true' : 'false');
+	}
+
 	// Form modal
 	showForm = $state(false);
 	editingBean = $state<Bean | null>(null);

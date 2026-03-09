@@ -6,6 +6,7 @@ export const ssr = false;
 export function load() {
 	let planningView: 'backlog' | 'board' = 'backlog';
 	let selectedBeanId: string | null = null;
+	let showPlanningChat = false;
 
 	if (browser) {
 		const saved = localStorage.getItem('beans-planning-view');
@@ -15,7 +16,9 @@ export function load() {
 
 		const params = new URLSearchParams(window.location.search);
 		selectedBeanId = params.get('bean');
+
+		showPlanningChat = localStorage.getItem('beans-planning-chat') === 'true';
 	}
 
-	return { planningView, selectedBeanId };
+	return { planningView, selectedBeanId, showPlanningChat };
 }

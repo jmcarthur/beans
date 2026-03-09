@@ -15,6 +15,7 @@
 	// Initialize UI state from load function data (runs before first render)
 	$effect.pre(() => {
 		ui.planningView = data.planningView;
+		ui.showPlanningChat = data.showPlanningChat;
 		if (data.selectedBeanId) {
 			ui.selectedBeanId = data.selectedBeanId;
 		}
