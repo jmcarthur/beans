@@ -178,15 +178,47 @@ func (m *Manager) readOutput(beanID string, stdout io.Reader) {
 			}
 
 		case eventToolUse:
-			// Tool use start — show tool name in the conversation
+			// Tool use start — show tool name in the conversation.
+			// Persist & reset streamingIdx so subsequent text deltas create a
+			// new assistant message *after* this tool message, preserving
+			// chronological order.
 			toolInputBuf.Reset()
 			toolName = ev.ToolName
 			m.mu.Lock()
 			if s, ok := m.sessions[beanID]; ok {
-				s.Messages = append(s.Messages, Message{Role: RoleTool, Content: ev.ToolName})
+				// Persist the pre-tool assistant message before resetting
+				idx := s.streamingIdx
+				if m.store != nil && idx >= 0 && idx < len(s.Messages) && s.Messages[idx].Role == RoleAssistant && s.Messages[idx].Content != "" {
+					msg := s.Messages[idx]
+					m.mu.Unlock()
+					if err := m.store.appendMessage(beanID, msg); err != nil {
+						log.Printf("[agent:%s] failed to persist pre-tool assistant message: %v", beanID, err)
+					}
+					m.mu.Lock()
+					// Re-check session still exists after re-acquiring lock
+					s = m.sessions[beanID]
+					if s == nil {
+						m.mu.Unlock()
+						m.notify(beanID)
+						continue
+					}
+				}
+				s.streamingIdx = -1
+				toolMsg := Message{Role: RoleTool, Content: ev.ToolName}
+				s.Messages = append(s.Messages, toolMsg)
 				toolMsgIdx = len(s.Messages) - 1
+				// Persist the tool message
+				if m.store != nil {
+					m.mu.Unlock()
+					if err := m.store.appendMessage(beanID, toolMsg); err != nil {
+						log.Printf("[agent:%s] failed to persist tool message: %v", beanID, err)
+					}
+				} else {
+					m.mu.Unlock()
+				}
+			} else {
+				m.mu.Unlock()
 			}
-			m.mu.Unlock()
 			m.notify(beanID)
 
 		case eventToolInputDelta:
