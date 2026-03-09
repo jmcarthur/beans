@@ -26,19 +26,19 @@
 	}
 
 	const typeBorders: Record<string, string> = {
-		milestone: 'border-l-purple-400 dark:border-l-purple-500',
-		epic: 'border-l-indigo-400 dark:border-l-indigo-500',
-		feature: 'border-l-cyan-400 dark:border-l-cyan-500',
-		bug: 'border-l-red-400 dark:border-l-red-500',
-		task: 'border-l-surface-dim'
+		milestone: 'border-l-type-milestone-border',
+		epic: 'border-l-type-epic-border',
+		feature: 'border-l-type-feature-border',
+		bug: 'border-l-type-bug-border',
+		task: 'border-l-type-task-border'
 	};
 
 	const typeColors: Record<string, string> = {
-		milestone: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-		epic: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300',
-		feature: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300',
-		bug: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
-		task: 'bg-surface-dim text-text-muted'
+		milestone: 'bg-type-milestone-bg text-type-milestone-text',
+		epic: 'bg-type-epic-bg text-type-epic-text',
+		feature: 'bg-type-feature-bg text-type-feature-text',
+		bug: 'bg-type-bug-bg text-type-bug-text',
+		task: 'bg-type-task-bg text-type-task-text'
 	};
 
 	const priorityIndicators: Record<string, string> = {
@@ -233,7 +233,7 @@
 
 					<div
 						class="rounded-lg border border-border bg-surface shadow-sm border-l-3 transition-all
-							{worktreeStore.hasWorktree(bean.id) ? 'border-l-success' : typeBorders[bean.type] ?? 'border-l-surface-dim'}
+							{worktreeStore.hasWorktree(bean.id) ? 'border-l-success' : typeBorders[bean.type] ?? 'border-l-type-task-border'}
 							{draggedBeanId === bean.id ? 'opacity-40' : 'hover:shadow-md'}
 							{selectedId === bean.id ? 'ring-1 ring-accent bg-accent/5' : ''}"
 						draggable="true"
@@ -253,7 +253,7 @@
 							</div>
 							<div class="flex items-center gap-2 mt-1">
 								<code class="text-[10px] text-text-faint">{bean.id.slice(-4)}</code>
-								<span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium {typeColors[bean.type] ?? 'bg-surface-dim text-text-muted'}">
+								<span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium {typeColors[bean.type] ?? 'bg-type-task-bg text-type-task-text'}">
 									{bean.type}
 								</span>
 							</div>

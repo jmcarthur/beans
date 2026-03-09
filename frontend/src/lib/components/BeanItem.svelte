@@ -26,11 +26,11 @@
 	};
 
 	const typeBorders: Record<string, string> = {
-		milestone: 'border-l-purple-400 dark:border-l-purple-500',
-		epic: 'border-l-indigo-400 dark:border-l-indigo-500',
-		feature: 'border-l-cyan-400 dark:border-l-cyan-500',
-		bug: 'border-l-red-400 dark:border-l-red-500',
-		task: 'border-l-surface-dim'
+		milestone: 'border-l-type-milestone-border',
+		epic: 'border-l-type-epic-border',
+		feature: 'border-l-type-feature-border',
+		bug: 'border-l-type-bug-border',
+		task: 'border-l-type-task-border'
 	};
 
 	function handleClick(e: MouseEvent) {
@@ -51,7 +51,7 @@
 		onclick={handleClick}
 		onkeydown={handleKeydown}
 		class="w-full text-left rounded-lg p-2 border-l-3 transition-all
-			{hasWorktree ? 'border-l-success' : typeBorders[bean.type] ?? 'border-l-surface-dim'}
+			{hasWorktree ? 'border-l-success' : typeBorders[bean.type] ?? 'border-l-type-task-border'}
 			{isSelected ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface hover:bg-surface-alt'}"
 	>
 		<div class="flex items-center gap-2 min-w-0">

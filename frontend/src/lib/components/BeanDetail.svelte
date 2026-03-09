@@ -29,19 +29,19 @@
 	};
 
 	const typeColors: Record<string, string> = {
-		milestone: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-		epic: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300',
-		feature: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300',
-		bug: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
-		task: 'bg-surface-dim text-text-muted'
+		milestone: 'bg-type-milestone-bg text-type-milestone-text',
+		epic: 'bg-type-epic-bg text-type-epic-text',
+		feature: 'bg-type-feature-bg text-type-feature-text',
+		bug: 'bg-type-bug-bg text-type-bug-text',
+		task: 'bg-type-task-bg text-type-task-text'
 	};
 
 	const typeBorders: Record<string, string> = {
-		milestone: 'border-l-purple-400 dark:border-l-purple-500',
-		epic: 'border-l-indigo-400 dark:border-l-indigo-500',
-		feature: 'border-l-cyan-400 dark:border-l-cyan-500',
-		bug: 'border-l-red-400 dark:border-l-red-500',
-		task: 'border-l-surface-dim'
+		milestone: 'border-l-type-milestone-border',
+		epic: 'border-l-type-epic-border',
+		feature: 'border-l-type-feature-border',
+		bug: 'border-l-type-bug-border',
+		task: 'border-l-type-task-border'
 	};
 
 	const priorityColors: Record<string, string> = {
@@ -108,7 +108,7 @@
 	<button
 		onclick={() => onSelect?.(b)}
 		class="w-full text-left rounded-lg p-2 border-l-2 transition-all bg-surface hover:bg-surface-alt
-			{typeBorders[b.type] ?? 'border-l-surface-dim'}"
+			{typeBorders[b.type] ?? 'border-l-type-task-border'}"
 	>
 		<div class="flex items-center gap-1.5 min-w-0">
 			<code class="text-[9px] text-text-faint shrink-0">{b.id.slice(-4)}</code>
@@ -144,7 +144,7 @@
 					</svg>
 				{/if}
 			</button>
-			<span class="text-[11px] px-2 py-0.5 rounded-full font-medium {typeColors[bean.type] ?? 'bg-surface-dim text-text-muted'}">{bean.type}</span>
+			<span class="text-[11px] px-2 py-0.5 rounded-full font-medium {typeColors[bean.type] ?? 'bg-type-task-bg text-type-task-text'}">{bean.type}</span>
 			<span class="text-[11px] px-2 py-0.5 rounded-full font-medium {statusColors[bean.status] ?? 'bg-status-todo-bg text-status-todo-text'}">{bean.status}</span>
 			{#if bean.priority && bean.priority !== 'normal'}
 				<span class="text-[11px] px-2 py-0.5 rounded-full font-medium border {priorityColors[bean.priority] ?? ''}">

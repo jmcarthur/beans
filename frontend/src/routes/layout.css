@@ -40,6 +40,23 @@ a,
 	--th-status-blocked-bg: #f3e8ff;
 	--th-status-blocked-text: #7c3aed;
 
+	/* Type colors (bg + text + border) */
+	--th-type-milestone-bg: #f3e8ff;
+	--th-type-milestone-text: #7e22ce;
+	--th-type-milestone-border: #c084fc;
+	--th-type-epic-bg: #e0e7ff;
+	--th-type-epic-text: #4338ca;
+	--th-type-epic-border: #818cf8;
+	--th-type-feature-bg: #cffafe;
+	--th-type-feature-text: #0e7490;
+	--th-type-feature-border: #22d3ee;
+	--th-type-bug-bg: #fee2e2;
+	--th-type-bug-text: #b91c1c;
+	--th-type-bug-border: #f87171;
+	--th-type-task-bg: #f1f3f5;
+	--th-type-task-text: #6b7280;
+	--th-type-task-border: #e2e5e9;
+
 	/* Markdown heading colors */
 	--th-md-h1: #1e3a5f;
 	--th-md-h2: #2d5a7b;
@@ -79,6 +96,22 @@ a,
 		--th-status-blocked-bg: #2e1065;
 		--th-status-blocked-text: #c084fc;
 
+		--th-type-milestone-bg: #3b0764;
+		--th-type-milestone-text: #d8b4fe;
+		--th-type-milestone-border: #a855f7;
+		--th-type-epic-bg: #1e1b4b;
+		--th-type-epic-text: #a5b4fc;
+		--th-type-epic-border: #6366f1;
+		--th-type-feature-bg: #083344;
+		--th-type-feature-text: #67e8f9;
+		--th-type-feature-border: #06b6d4;
+		--th-type-bug-bg: #450a0a;
+		--th-type-bug-text: #fca5a5;
+		--th-type-bug-border: #ef4444;
+		--th-type-task-bg: #27272a;
+		--th-type-task-text: #a1a1aa;
+		--th-type-task-border: #3f3f46;
+
 		--th-md-h1: #93c5fd;
 		--th-md-h2: #7dd3fc;
 		--th-md-h3: #6ee7b7;
@@ -116,4 +149,20 @@ a,
 	--color-status-scrapped-text: var(--th-status-scrapped-text);
 	--color-status-blocked-bg: var(--th-status-blocked-bg);
 	--color-status-blocked-text: var(--th-status-blocked-text);
+
+	--color-type-milestone-bg: var(--th-type-milestone-bg);
+	--color-type-milestone-text: var(--th-type-milestone-text);
+	--color-type-milestone-border: var(--th-type-milestone-border);
+	--color-type-epic-bg: var(--th-type-epic-bg);
+	--color-type-epic-text: var(--th-type-epic-text);
+	--color-type-epic-border: var(--th-type-epic-border);
+	--color-type-feature-bg: var(--th-type-feature-bg);
+	--color-type-feature-text: var(--th-type-feature-text);
+	--color-type-feature-border: var(--th-type-feature-border);
+	--color-type-bug-bg: var(--th-type-bug-bg);
+	--color-type-bug-text: var(--th-type-bug-text);
+	--color-type-bug-border: var(--th-type-bug-border);
+	--color-type-task-bg: var(--th-type-task-bg);
+	--color-type-task-text: var(--th-type-task-text);
+	--color-type-task-border: var(--th-type-task-border);
 }
