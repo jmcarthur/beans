@@ -47,6 +47,7 @@ func agentSessionToModel(s *agent.Session) *model.AgentSession {
 		Status:    status,
 		Messages:  msgs,
 		Error:     errPtr,
+		PlanMode:  s.PlanMode,
 	}
 }
 

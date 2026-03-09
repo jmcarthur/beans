@@ -31,6 +31,8 @@ type AgentSession struct {
 	Messages []*AgentMessage `json:"messages"`
 	// Last error message, if any
 	Error *string `json:"error,omitempty"`
+	// Whether the agent is in plan mode (read-only)
+	PlanMode bool `json:"planMode"`
 }
 
 // Represents a change to a bean

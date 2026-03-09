@@ -132,6 +132,13 @@ type Mutation {
   Stop the running agent in a worktree.
   """
   stopAgent(beanId: ID!): Boolean!
+
+  """
+  Set plan mode for an agent session. Plan mode makes the agent read-only
+  (can explore/analyze but not edit). Kills any running process since the
+  permission mode is a startup flag.
+  """
+  setAgentPlanMode(beanId: ID!, planMode: Boolean!): Boolean!
 }
 
 """
@@ -364,6 +371,8 @@ type AgentSession {
   messages: [AgentMessage!]!
   "Last error message, if any"
   error: String
+  "Whether the agent is in plan mode (read-only)"
+  planMode: Boolean!
 }
 
 """

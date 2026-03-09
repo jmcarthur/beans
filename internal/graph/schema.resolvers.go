@@ -568,6 +568,17 @@ func (r *mutationResolver) StopAgent(ctx context.Context, beanID string) (bool, 
 	return true, nil
 }
 
+// SetAgentPlanMode is the resolver for the setAgentPlanMode field.
+func (r *mutationResolver) SetAgentPlanMode(ctx context.Context, beanID string, planMode bool) (bool, error) {
+	if r.AgentMgr == nil {
+		return false, fmt.Errorf("agent manager not available")
+	}
+	if err := r.AgentMgr.SetPlanMode(beanID, planMode); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Bean is the resolver for the bean field.
 func (r *queryResolver) Bean(ctx context.Context, id string) (*bean.Bean, error) {
 	b, err := r.Core.Get(id)

@@ -31,6 +31,14 @@ a,
 	@apply border-border bg-surface text-text-muted hover:bg-surface-alt;
 }
 
+.btn-tab-sm {
+	@apply h-6 border px-2 text-xs font-medium transition-colors;
+}
+
+.btn-tab-sm-inactive {
+	@apply border-border bg-surface text-text-faint hover:text-text-muted;
+}
+
 /* ── Bean link ───────────────────────────────── */
 .bean-link {
 	@apply inline-flex cursor-pointer rounded bg-accent/10 px-1 align-baseline font-mono text-[0.85em] whitespace-nowrap text-accent no-underline transition-colors hover:border-accent/45 hover:bg-accent/20;

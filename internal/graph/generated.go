@@ -61,6 +61,7 @@ type ComplexityRoot struct {
 		BeanID    func(childComplexity int) int
 		Error     func(childComplexity int) int
 		Messages  func(childComplexity int) int
+		PlanMode  func(childComplexity int) int
 		Status    func(childComplexity int) int
 	}
 
@@ -103,6 +104,7 @@ type ComplexityRoot struct {
 		RemoveBlocking   func(childComplexity int, id string, targetID string, ifMatch *string) int
 		RemoveWorktree   func(childComplexity int, beanID string) int
 		SendAgentMessage func(childComplexity int, beanID string, message string) int
+		SetAgentPlanMode func(childComplexity int, beanID string, planMode bool) int
 		SetParent        func(childComplexity int, id string, parentID *string, ifMatch *string) int
 		StopAgent        func(childComplexity int, beanID string) int
 		UpdateBean       func(childComplexity int, id string, input model.UpdateBeanInput) int
@@ -151,6 +153,7 @@ type MutationResolver interface {
 	RemoveWorktree(ctx context.Context, beanID string) (bool, error)
 	SendAgentMessage(ctx context.Context, beanID string, message string) (bool, error)
 	StopAgent(ctx context.Context, beanID string) (bool, error)
+	SetAgentPlanMode(ctx context.Context, beanID string, planMode bool) (bool, error)
 }
 type QueryResolver interface {
 	Bean(ctx context.Context, id string) (*bean.Bean, error)
@@ -220,6 +223,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AgentSession.Messages(childComplexity), true
+	case "AgentSession.planMode":
+		if e.complexity.AgentSession.PlanMode == nil {
+			break
+		}
+
+		return e.complexity.AgentSession.PlanMode(childComplexity), true
 	case "AgentSession.status":
 		if e.complexity.AgentSession.Status == nil {
 			break
@@ -481,6 +490,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SendAgentMessage(childComplexity, args["beanId"].(string), args["message"].(string)), true
+	case "Mutation.setAgentPlanMode":
+		if e.complexity.Mutation.SetAgentPlanMode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAgentPlanMode_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAgentPlanMode(childComplexity, args["beanId"].(string), args["planMode"].(bool)), true
 	case "Mutation.setParent":
 		if e.complexity.Mutation.SetParent == nil {
 			break
@@ -932,6 +952,22 @@ func (ec *executionContext) field_Mutation_sendAgentMessage_args(ctx context.Con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_setAgentPlanMode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beanId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["beanId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "planMode", ec.unmarshalNBoolean2bool)
+	if err != nil {
+		return nil, err
+	}
+	args["planMode"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_setParent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1302,6 +1338,35 @@ func (ec *executionContext) fieldContext_AgentSession_error(_ context.Context, f
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AgentSession_planMode(ctx context.Context, field graphql.CollectedField, obj *model.AgentSession) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AgentSession_planMode,
+		func(ctx context.Context) (any, error) {
+			return obj.PlanMode, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AgentSession_planMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentSession",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3016,6 +3081,47 @@ func (ec *executionContext) fieldContext_Mutation_stopAgent(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_setAgentPlanMode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_setAgentPlanMode,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SetAgentPlanMode(ctx, fc.Args["beanId"].(string), fc.Args["planMode"].(bool))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setAgentPlanMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setAgentPlanMode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_bean(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3256,6 +3362,8 @@ func (ec *executionContext) fieldContext_Query_agentSession(ctx context.Context,
 				return ec.fieldContext_AgentSession_messages(ctx, field)
 			case "error":
 				return ec.fieldContext_AgentSession_error(ctx, field)
+			case "planMode":
+				return ec.fieldContext_AgentSession_planMode(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AgentSession", field.Name)
 		},
@@ -3505,6 +3613,8 @@ func (ec *executionContext) fieldContext_Subscription_agentSessionChanged(ctx co
 				return ec.fieldContext_AgentSession_messages(ctx, field)
 			case "error":
 				return ec.fieldContext_AgentSession_error(ctx, field)
+			case "planMode":
+				return ec.fieldContext_AgentSession_planMode(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AgentSession", field.Name)
 		},
@@ -5655,6 +5765,11 @@ func (ec *executionContext) _AgentSession(ctx context.Context, sel ast.Selection
 			}
 		case "error":
 			out.Values[i] = ec._AgentSession_error(ctx, field, obj)
+		case "planMode":
+			out.Values[i] = ec._AgentSession_planMode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6165,6 +6280,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "stopAgent":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_stopAgent(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setAgentPlanMode":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setAgentPlanMode(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

@@ -342,6 +342,9 @@ func buildClaudeArgs(session *Session) []string {
 		"--input-format", "stream-json",
 		"--include-partial-messages",
 	}
+	if session.PlanMode {
+		args = append(args, "--permission-mode", "plan")
+	}
 	if session.SessionID != "" {
 		args = append(args, "--resume", session.SessionID)
 	}

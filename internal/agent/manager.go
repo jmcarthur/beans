@@ -185,6 +185,50 @@ func (m *Manager) notify(beanID string) {
 	}
 }
 
+// SetPlanMode toggles plan mode for a session, killing any running process
+// since --permission-mode is a startup flag that requires respawning.
+func (m *Manager) SetPlanMode(beanID string, planMode bool) error {
+	m.mu.Lock()
+	session, hasSession := m.sessions[beanID]
+	if !hasSession {
+		// Create session in memory so the mode is set before any messages
+		session = &Session{
+			ID:           beanID,
+			AgentType:    "claude",
+			Status:       StatusIdle,
+			PlanMode:     planMode,
+			streamingIdx: -1,
+		}
+		m.sessions[beanID] = session
+		m.mu.Unlock()
+		m.notify(beanID)
+		return nil
+	}
+
+	if session.PlanMode == planMode {
+		m.mu.Unlock()
+		return nil
+	}
+
+	session.PlanMode = planMode
+	// Clear session ID so next message spawns a fresh process with the new mode
+	session.SessionID = ""
+
+	proc, hasProc := m.processes[beanID]
+	if hasProc {
+		delete(m.processes, beanID)
+		session.Status = StatusIdle
+	}
+	m.mu.Unlock()
+
+	if hasProc && proc != nil {
+		proc.kill()
+	}
+
+	m.notify(beanID)
+	return nil
+}
+
 // Shutdown kills all running processes. Call on server shutdown.
 func (m *Manager) Shutdown() {
 	m.mu.Lock()

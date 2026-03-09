@@ -235,6 +235,117 @@ func TestStopSession(t *testing.T) {
 	}
 }
 
+func TestSetPlanMode_CreatesSession(t *testing.T) {
+	m := NewManager("")
+
+	err := m.SetPlanMode("test", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s := m.sessions["test"]
+	if s == nil {
+		t.Fatal("expected session to be created")
+	}
+	if !s.PlanMode {
+		t.Error("expected PlanMode to be true")
+	}
+	if s.Status != StatusIdle {
+		t.Errorf("status = %q, want %q", s.Status, StatusIdle)
+	}
+}
+
+func TestSetPlanMode_TogglesExisting(t *testing.T) {
+	m := NewManager("")
+	m.sessions["test"] = &Session{
+		ID:        "test",
+		Status:    StatusIdle,
+		PlanMode:  false,
+		SessionID: "sess-123",
+	}
+
+	err := m.SetPlanMode("test", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	s := m.sessions["test"]
+	if !s.PlanMode {
+		t.Error("expected PlanMode to be true")
+	}
+	// SessionID should be cleared since mode changed and process would need respawning
+	if s.SessionID != "" {
+		t.Errorf("expected SessionID to be cleared, got %q", s.SessionID)
+	}
+}
+
+func TestSetPlanMode_NoopWhenSame(t *testing.T) {
+	m := NewManager("")
+	ch := m.Subscribe("test")
+	defer m.Unsubscribe("test", ch)
+
+	m.sessions["test"] = &Session{
+		ID:       "test",
+		Status:   StatusIdle,
+		PlanMode: true,
+	}
+
+	// Drain any existing notification
+	select {
+	case <-ch:
+	default:
+	}
+
+	err := m.SetPlanMode("test", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should NOT notify since nothing changed
+	select {
+	case <-ch:
+		t.Error("expected no notification for noop")
+	default:
+	}
+}
+
+func TestSetPlanMode_IncludedInSnapshot(t *testing.T) {
+	m := NewManager("")
+	m.sessions["test"] = &Session{
+		ID:       "test",
+		Status:   StatusIdle,
+		PlanMode: true,
+	}
+
+	snap := m.GetSession("test")
+	if !snap.PlanMode {
+		t.Error("expected PlanMode=true in snapshot")
+	}
+}
+
+func TestBuildClaudeArgs_PlanMode(t *testing.T) {
+	args := buildClaudeArgs(&Session{PlanMode: true})
+	found := false
+	for i, a := range args {
+		if a == "--permission-mode" && i+1 < len(args) && args[i+1] == "plan" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --permission-mode plan in args, got %v", args)
+	}
+}
+
+func TestBuildClaudeArgs_NoPlanMode(t *testing.T) {
+	args := buildClaudeArgs(&Session{PlanMode: false})
+	for _, a := range args {
+		if a == "--permission-mode" {
+			t.Errorf("unexpected --permission-mode in args: %v", args)
+		}
+	}
+}
+
 func TestShutdown(t *testing.T) {
 	m := NewManager("")
 	// Just verify it doesn't panic with no processes

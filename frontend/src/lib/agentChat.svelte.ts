@@ -13,6 +13,7 @@ export interface AgentSession {
 	status: 'IDLE' | 'RUNNING' | 'ERROR';
 	messages: AgentMessage[];
 	error: string | null;
+	planMode: boolean;
 }
 
 const AGENT_SESSION_SUBSCRIPTION = gql`
@@ -26,6 +27,7 @@ const AGENT_SESSION_SUBSCRIPTION = gql`
 				content
 			}
 			error
+			planMode
 		}
 	}
 `;
@@ -39,6 +41,12 @@ const SEND_AGENT_MESSAGE = gql`
 const STOP_AGENT = gql`
 	mutation StopAgent($beanId: ID!) {
 		stopAgent(beanId: $beanId)
+	}
+`;
+
+const SET_AGENT_PLAN_MODE = gql`
+	mutation SetAgentPlanMode($beanId: ID!, $planMode: Boolean!) {
+		setAgentPlanMode(beanId: $beanId, planMode: $planMode)
 	}
 `;
 
@@ -108,6 +116,19 @@ export class AgentChatStore {
 
 	async stop(beanId: string): Promise<boolean> {
 		const result = await client.mutation(STOP_AGENT, { beanId }).toPromise();
+
+		if (result.error) {
+			this.error = result.error.message;
+			return false;
+		}
+
+		return true;
+	}
+
+	async setPlanMode(beanId: string, planMode: boolean): Promise<boolean> {
+		const result = await client
+			.mutation(SET_AGENT_PLAN_MODE, { beanId, planMode })
+			.toPromise();
 
 		if (result.error) {
 			this.error = result.error.message;

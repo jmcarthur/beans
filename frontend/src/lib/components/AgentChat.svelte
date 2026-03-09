@@ -30,6 +30,7 @@
 	const status = $derived(store.session?.status ?? null);
 	const isRunning = $derived(status === 'RUNNING');
 	const sessionError = $derived(store.session?.error ?? null);
+	const planMode = $derived(store.session?.planMode ?? false);
 
 	// Auto-scroll to bottom when messages change
 	$effect(() => {
@@ -189,6 +190,36 @@
 					Stop
 				</button>
 			{/if}
+		</div>
+
+		<!-- Mode toggle -->
+		<div class="flex items-center pt-2">
+			<div class={["flex", isRunning && 'opacity-50 pointer-events-none']}>
+				<button
+					onclick={() => store.setPlanMode(beanId, false)}
+					disabled={isRunning}
+					class={[
+						'btn-tab-sm rounded-l',
+						!planMode
+							? 'border-status-in-progress-text/30 bg-status-in-progress-bg text-status-in-progress-text'
+							: 'btn-tab-sm-inactive'
+					]}
+				>
+					Work
+				</button>
+				<button
+					onclick={() => store.setPlanMode(beanId, true)}
+					disabled={isRunning}
+					class={[
+						'btn-tab-sm rounded-r border-l-0',
+						planMode
+							? 'border-warning/30 bg-warning/10 text-warning'
+							: 'btn-tab-sm-inactive'
+					]}
+				>
+					Plan
+				</button>
+			</div>
 		</div>
 	</div>
 </div>

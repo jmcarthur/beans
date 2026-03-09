@@ -34,6 +34,7 @@ type Session struct {
 	Messages  []Message
 	Error     string // last error message, if status == error
 	WorkDir   string // worktree filesystem path
+	PlanMode  bool   // when true, agent uses --permission-mode plan (read-only)
 
 	// streamingIdx tracks the message index currently being streamed to.
 	// This ensures deltas from an ongoing turn go to the correct assistant
@@ -54,5 +55,6 @@ func (s *Session) snapshot() Session {
 		Messages:  msgs,
 		Error:     s.Error,
 		WorkDir:   s.WorkDir,
+		PlanMode:  s.PlanMode,
 	}
 }
