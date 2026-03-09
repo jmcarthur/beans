@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-07T23:02:43Z
-updated_at: 2026-03-07T23:07:09Z
+updated_at: 2026-03-09T17:01:28Z
+order: V1y
 ---
 
 Implement fractional indexing so beans can be manually reordered on the board via drag-and-drop. Each bean gets an 'order' field in frontmatter. Moving a bean only writes one file.

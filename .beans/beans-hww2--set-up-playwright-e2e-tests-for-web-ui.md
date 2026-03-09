@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T11:37:25Z
-updated_at: 2026-03-08T11:46:22Z
+updated_at: 2026-03-09T17:01:28Z
+order: zzk
 ---
 
 Add Playwright e2e tests with page objects to verify the web UI works correctly, including real-time sorting updates from filesystem changes.

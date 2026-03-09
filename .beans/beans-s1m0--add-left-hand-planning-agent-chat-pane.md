@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-09T14:46:18Z
-updated_at: 2026-03-09T14:47:37Z
+updated_at: 2026-03-09T17:01:28Z
+order: VV
 ---
 
 Add a collapsible left-hand chat pane to the planning view (backlog + board modes) that connects to the central agent session (__central__), running in the main repo directory.

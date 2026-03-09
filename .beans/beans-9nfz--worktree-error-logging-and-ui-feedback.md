@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-09T11:20:07Z
-updated_at: 2026-03-09T11:42:01Z
+updated_at: 2026-03-09T17:01:28Z
+order: zzy
 ---
 
 Add server-side logging for worktree create/destroy operations, and show error messages in the web UI when worktree operations fail.

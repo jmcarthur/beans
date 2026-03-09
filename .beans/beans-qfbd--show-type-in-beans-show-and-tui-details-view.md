@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-02-11T13:17:11Z
-updated_at: 2026-02-11T13:20:50Z
+updated_at: 2026-03-09T17:01:28Z
+order: w
 ---
 
 Add the type field (bug, feature, epic, etc.) to the display in both `beans show` command and TUI details view.

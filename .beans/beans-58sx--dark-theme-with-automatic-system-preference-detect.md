@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-09T14:06:45Z
-updated_at: 2026-03-09T14:13:08Z
+updated_at: 2026-03-09T17:01:28Z
+order: Vw
 ---
 
 Implement dark mode that switches automatically based on prefers-color-scheme. Define dark variants for all semantic color tokens and fix hardcoded colors in components.

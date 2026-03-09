@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-09T08:47:17Z
-updated_at: 2026-03-09T10:13:29Z
+updated_at: 2026-03-09T17:01:28Z
+order: s
 ---
 
 Extract duplicated split layout logic from backlog, board, and worktree views into a reusable SplitPane component. Supports horizontal/vertical splits, nesting for 3+ panes, and per-instance resize persistence.

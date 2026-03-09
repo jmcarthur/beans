@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2025-12-20T09:56:54Z
-updated_at: 2025-12-20T10:00:52Z
+updated_at: 2026-03-09T17:01:28Z
+order: Vy
 ---
 
 Create a Svelte 5 runes-style stateful class for managing beans in the frontend.

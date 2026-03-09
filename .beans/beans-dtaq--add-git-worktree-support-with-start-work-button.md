@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-07T22:46:39Z
-updated_at: 2026-03-07T22:54:37Z
+updated_at: 2026-03-09T17:01:28Z
+order: V1z
 ---
 
 Create git worktrees from the web UI via a Start Work button on beans.

@@ -3,8 +3,10 @@
 title: Channel-based file watcher with typed events
 status: completed
 type: feature
+priority: normal
 created_at: 2025-12-20T09:50:06Z
-updated_at: 2025-12-20T09:50:06Z
+updated_at: 2026-03-09T17:01:28Z
+order: Vs
 ---
 
 Upgrade the file watcher from callback-based to channel-based pub/sub system.

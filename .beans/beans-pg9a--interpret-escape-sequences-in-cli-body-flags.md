@@ -5,8 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-09T12:19:01Z
-updated_at: 2026-03-09T14:51:34Z
-order: V1Q
+updated_at: 2026-03-09T17:01:28Z
+order: V1v
 ---
 
 CLI body flags (--body-append, --body, --body-replace-old/new) pass literal \\n instead of real newlines when called by agents. Add unescapeBody() to interpret \\n, \\t, \\\\ sequences.

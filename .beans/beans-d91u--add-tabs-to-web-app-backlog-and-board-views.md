@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-07T22:21:38Z
-updated_at: 2026-03-07T22:23:04Z
+updated_at: 2026-03-09T17:01:28Z
+order: Vk
 ---
 
 Add tab navigation to the main view with two tabs:

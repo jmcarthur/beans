@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T10:55:35Z
-updated_at: 2026-03-08T11:01:07Z
+updated_at: 2026-03-09T17:01:28Z
+order: zzw
 ---
 
 Restructure the repository to build three separate binaries sharing internal packages.

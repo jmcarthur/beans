@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2025-12-20T10:04:15Z
-updated_at: 2025-12-20T10:07:28Z
+updated_at: 2026-03-09T17:01:28Z
+order: z
 ---
 
 Add real-time updates to BeansStore via GraphQL subscription.
