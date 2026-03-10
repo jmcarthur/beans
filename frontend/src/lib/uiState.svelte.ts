@@ -47,6 +47,18 @@ class UIState {
 		localStorage.setItem('beans-planning-chat', this.showPlanningChat ? 'true' : 'false');
 	}
 
+	// Filter text (persisted to localStorage)
+	filterText = $state('');
+
+	setFilterText(text: string) {
+		this.filterText = text;
+		if (text) {
+			localStorage.setItem('beans-filter-text', text);
+		} else {
+			localStorage.removeItem('beans-filter-text');
+		}
+	}
+
 	// Form modal
 	showForm = $state(false);
 	editingBean = $state<Bean | null>(null);

@@ -7,6 +7,7 @@ export function load() {
 	let planningView: 'backlog' | 'board' = 'backlog';
 	let selectedBeanId: string | null = null;
 	let showPlanningChat = false;
+	let filterText = '';
 
 	if (browser) {
 		const saved = localStorage.getItem('beans-planning-view');
@@ -18,7 +19,9 @@ export function load() {
 		selectedBeanId = params.get('bean');
 
 		showPlanningChat = localStorage.getItem('beans-planning-chat') === 'true';
+
+		filterText = localStorage.getItem('beans-filter-text') ?? '';
 	}
 
-	return { planningView, selectedBeanId, showPlanningChat };
+	return { planningView, selectedBeanId, showPlanningChat, filterText };
 }

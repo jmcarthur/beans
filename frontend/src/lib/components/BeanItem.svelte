@@ -2,6 +2,7 @@
 	import type { Bean } from '$lib/beans.svelte';
 	import { beansStore } from '$lib/beans.svelte';
 	import { backlogDrag } from '$lib/backlogDrag.svelte';
+	import { matchesFilter } from '$lib/filter';
 	import BeanCard from './BeanCard.svelte';
 	import BeanItem from './BeanItem.svelte';
 
@@ -13,12 +14,23 @@
 		depth?: number;
 		selectedId?: string | null;
 		onSelect?: (bean: Bean) => void;
+		filterText?: string;
 	}
 
-	let { bean, parentId = null, index = 0, depth = 0, selectedId = null, onSelect }: Props =
-		$props();
+	let {
+		bean,
+		parentId = null,
+		index = 0,
+		depth = 0,
+		selectedId = null,
+		onSelect,
+		filterText = ''
+	}: Props = $props();
 
 	const children = $derived(beansStore.children(bean.id));
+	const filteredChildren = $derived(
+		filterText ? children.filter((child) => matchesFilter(child, filterText)) : children
+	);
 
 	function handleClick(e: MouseEvent) {
 		e.stopPropagation();
@@ -57,15 +69,15 @@
 		/>
 	</div>
 
-	{#if children.length > 0}
+	{#if filteredChildren.length > 0}
 		<div
 			class="mt-1 ml-4 border-l border-border pl-2"
-			ondragover={(e) => backlogDrag.hoverList(e, bean.id, children.length)}
+			ondragover={(e) => backlogDrag.hoverList(e, bean.id, filteredChildren.length)}
 			ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, bean.id)}
-			ondrop={(e) => backlogDrag.drop(e, bean.id, children)}
+			ondrop={(e) => backlogDrag.drop(e, bean.id, filteredChildren)}
 			role="list"
 		>
-			{#each children as child, i (child.id)}
+			{#each filteredChildren as child, i (child.id)}
 				<BeanItem
 					bean={child}
 					parentId={bean.id}
@@ -73,6 +85,7 @@
 					depth={depth + 1}
 					{selectedId}
 					{onSelect}
+					{filterText}
 				/>
 			{/each}
 
@@ -80,7 +93,7 @@
 			<div
 				class={[
 					'mx-1 h-0.5 rounded-full transition-colors',
-					backlogDrag.showEndIndicator(bean.id, children.length)
+					backlogDrag.showEndIndicator(bean.id, filteredChildren.length)
 						? 'bg-accent'
 						: 'bg-transparent'
 				]}

@@ -2,6 +2,8 @@
 	import type { Bean } from '$lib/beans.svelte';
 	import { beansStore, sortBeans } from '$lib/beans.svelte';
 	import { applyDrop } from '$lib/dragOrder';
+	import { matchesFilter } from '$lib/filter';
+	import { ui } from '$lib/uiState.svelte';
 	import { typeBorders } from '$lib/styles';
 	import BeanCard from './BeanCard.svelte';
 
@@ -29,7 +31,14 @@
 
 	function beansForStatus(status: string): Bean[] {
 		// sortBeans already handles order → priority → type → title sorting
-		return sortBeans(beansStore.all.filter((b) => b.status === status && b.status !== 'scrapped'));
+		return sortBeans(
+			beansStore.all.filter(
+				(b) =>
+					b.status === status &&
+					b.status !== 'scrapped' &&
+					matchesFilter(b, ui.filterText)
+			)
+		);
 	}
 
 	// Drag and drop

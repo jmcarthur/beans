@@ -2,17 +2,41 @@
 	import { beansStore } from '$lib/beans.svelte';
 	import { ui } from '$lib/uiState.svelte';
 	import { backlogDrag } from '$lib/backlogDrag.svelte';
+	import { matchesFilter } from '$lib/filter';
 	import BeanItem from '$lib/components/BeanItem.svelte';
 	import BoardView from '$lib/components/BoardView.svelte';
 	import BeanPane from '$lib/components/BeanPane.svelte';
 	import SplitPane from '$lib/components/SplitPane.svelte';
 	import AgentChat from '$lib/components/AgentChat.svelte';
+	import FilterInput from '$lib/components/FilterInput.svelte';
 
 	const CENTRAL_SESSION_ID = '__central__';
 
+	let filterInput = $state<FilterInput | null>(null);
+
 	const topLevelBeans = $derived(beansStore.all.filter((b) => !b.parentId));
 
+	/**
+	 * Filtered top-level beans for the backlog view. A top-level bean is shown if it
+	 * or any of its children match the filter.
+	 */
+	const filteredTopLevelBeans = $derived.by(() => {
+		const text = ui.filterText;
+		if (!text) return topLevelBeans;
+		return topLevelBeans.filter((bean) => {
+			if (matchesFilter(bean, text)) return true;
+			// Check children recursively
+			return beansStore.children(bean.id).some((child) => matchesFilter(child, text));
+		});
+	});
+
 	function handleKeydown(e: KeyboardEvent) {
+		// Cmd/Ctrl+F to focus filter input
+		if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+			e.preventDefault();
+			filterInput?.focus();
+			return;
+		}
 		if (e.key === 'Escape' && ui.currentBean && !ui.showForm) {
 			ui.clearSelection();
 		}
@@ -104,6 +128,9 @@
 								Board
 							</button>
 						</div>
+						<div class="mx-3 w-60">
+							<FilterInput bind:this={filterInput} />
+						</div>
 						<div class="flex-1"></div>
 						<button class="btn-primary" onclick={() => ui.openCreateForm()}>+ New Bean</button>
 					</div>
@@ -115,22 +142,25 @@
 							<div
 								class="p-3"
 								onclick={handlePlanningClick}
-								ondragover={(e) => backlogDrag.hoverList(e, null, topLevelBeans.length)}
+								ondragover={(e) => backlogDrag.hoverList(e, null, filteredTopLevelBeans.length)}
 								ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, null)}
-								ondrop={(e) => backlogDrag.drop(e, null, topLevelBeans)}
+								ondrop={(e) => backlogDrag.drop(e, null, filteredTopLevelBeans)}
 								role="list"
 							>
-								{#each topLevelBeans as bean, i (bean.id)}
+								{#each filteredTopLevelBeans as bean, i (bean.id)}
 									<BeanItem
 										{bean}
 										parentId={null}
 										index={i}
 										selectedId={ui.currentBean?.id}
 										onSelect={(b) => ui.selectBean(b)}
+										filterText={ui.filterText}
 									/>
 								{:else}
 									{#if !beansStore.loading}
-										<p class="text-text-muted text-center py-8 text-sm">No beans yet</p>
+										<p class="text-text-muted text-center py-8 text-sm">
+											{ui.filterText ? 'No matching beans' : 'No beans yet'}
+										</p>
 									{/if}
 								{/each}
 
@@ -138,7 +168,7 @@
 								<div
 									class={[
 										'mx-1 h-0.5 rounded-full transition-colors',
-										backlogDrag.showEndIndicator(null, topLevelBeans.length)
+										backlogDrag.showEndIndicator(null, filteredTopLevelBeans.length)
 											? 'bg-accent'
 											: 'bg-transparent'
 									]}

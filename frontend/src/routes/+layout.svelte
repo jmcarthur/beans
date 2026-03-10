@@ -16,6 +16,7 @@
 	$effect.pre(() => {
 		ui.planningView = data.planningView;
 		ui.showPlanningChat = data.showPlanningChat;
+		ui.filterText = data.filterText;
 		if (data.selectedBeanId) {
 			ui.selectedBeanId = data.selectedBeanId;
 		}
