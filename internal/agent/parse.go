@@ -79,6 +79,7 @@ type parsedEventType int
 
 const (
 	eventUnknown parsedEventType = iota
+	eventIgnored  // recognized but not actionable (e.g. message_stop, content_block_stop)
 	eventTextDelta
 	eventNewTextBlock // content_block_start with type=text (signals paragraph break needed)
 	eventAssistantMessage
@@ -155,6 +156,10 @@ func parseStreamLine(line []byte) parsedEvent {
 		if ev.Subtype == "status" && ev.Status != "" {
 			return parsedEvent{Type: eventSystemStatus, Text: ev.Status}
 		}
+
+	case "user":
+		// Tool result / user message events — no action needed
+		return parsedEvent{Type: eventIgnored}
 	}
 
 	return parsedEvent{Type: eventUnknown}
@@ -185,6 +190,9 @@ func parseInnerEvent(inner *innerEvent) parsedEvent {
 				return parsedEvent{Type: eventToolUse, ToolName: inner.ContentBlock.Name}
 			}
 		}
+	case "content_block_stop", "message_start", "message_delta", "message_stop":
+		// Benign lifecycle events — no actionable content
+		return parsedEvent{Type: eventIgnored}
 	}
 
 	return parsedEvent{Type: eventUnknown}

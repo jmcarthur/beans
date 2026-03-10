@@ -36,7 +36,27 @@ func TestParseStreamLine(t *testing.T) {
 		{
 			name:  "stream_event with message_start (ignored)",
 			input: `{"type":"stream_event","event":{"type":"message_start","message":{"model":"claude"}},"session_id":"abc"}`,
-			want:  parsedEvent{Type: eventUnknown},
+			want:  parsedEvent{Type: eventIgnored},
+		},
+		{
+			name:  "stream_event with message_stop (ignored)",
+			input: `{"type":"stream_event","event":{"type":"message_stop"},"session_id":"abc"}`,
+			want:  parsedEvent{Type: eventIgnored},
+		},
+		{
+			name:  "stream_event with message_delta (ignored)",
+			input: `{"type":"stream_event","event":{"type":"message_delta","delta":{"stop_reason":"end_turn"}},"session_id":"abc"}`,
+			want:  parsedEvent{Type: eventIgnored},
+		},
+		{
+			name:  "stream_event with content_block_stop (ignored)",
+			input: `{"type":"stream_event","event":{"type":"content_block_stop","index":0},"session_id":"abc"}`,
+			want:  parsedEvent{Type: eventIgnored},
+		},
+		{
+			name:  "user event (tool result, ignored)",
+			input: `{"type":"user","message":{"role":"user","content":[{"tool_use_id":"toolu_123","type":"tool_result","content":"ok"}]}}`,
+			want:  parsedEvent{Type: eventIgnored},
 		},
 		{
 			name:  "stream_event with tool use",

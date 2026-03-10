@@ -602,7 +602,7 @@ func TestBuildClaudeArgs_NoPlanMode(t *testing.T) {
 }
 
 func TestLoadOrCreateSession_DefaultsToYoloMode(t *testing.T) {
-	m := NewManager("")
+	m := NewManager("", nil)
 	m.mu.Lock()
 	s := m.loadOrCreateSession("test", "/tmp/test")
 	m.mu.Unlock()
