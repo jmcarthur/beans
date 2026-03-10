@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -385,9 +386,15 @@ func (m *Manager) ResolvePermission(beanID string, allow bool) error {
 	m.notify(beanID)
 
 	if allow {
-		// Re-send "yes, proceed" to trigger respawn with --allowedTools + --resume
+		// Build a clear approval message so the resumed agent knows the tools were approved
+		toolNames := make([]string, len(pending.PermissionDenials))
+		for i, d := range pending.PermissionDenials {
+			toolNames[i] = d.ToolName
+		}
+		msg := fmt.Sprintf("The user has approved the use of the following tools: %s. Please retry your previous action.", strings.Join(toolNames, ", "))
+
 		go func() {
-			_ = m.SendMessage(beanID, s.WorkDir, "yes, proceed")
+			_ = m.SendMessage(beanID, s.WorkDir, msg)
 		}()
 	}
 

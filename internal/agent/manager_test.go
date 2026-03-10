@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewManager(t *testing.T) {
@@ -826,6 +828,54 @@ func TestResolvePermission_Allow(t *testing.T) {
 	case <-ch:
 	default:
 		t.Error("expected notification")
+	}
+}
+
+func TestResolvePermission_AllowMessageIncludesToolNames(t *testing.T) {
+	m := NewManager("", nil)
+
+	m.sessions["test"] = &Session{
+		ID:      "test",
+		Status:  StatusIdle,
+		WorkDir: "/tmp/test",
+		PendingInteraction: &PendingInteraction{
+			Type: InteractionPermission,
+			PermissionDenials: []PermissionDenial{
+				{ToolName: "Bash"},
+				{ToolName: "Write"},
+			},
+		},
+	}
+
+	err := m.ResolvePermission("test", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Wait briefly for the goroutine to send the message
+	time.Sleep(50 * time.Millisecond)
+
+	s := m.sessions["test"]
+
+	// Find the user message that was sent as continuation
+	var lastUserMsg string
+	for _, msg := range s.Messages {
+		if msg.Role == RoleUser {
+			lastUserMsg = msg.Content
+		}
+	}
+
+	if lastUserMsg == "" {
+		t.Fatal("expected a user message to be sent after permission approval")
+	}
+	if !strings.Contains(lastUserMsg, "Bash") {
+		t.Errorf("expected continuation message to mention 'Bash', got: %s", lastUserMsg)
+	}
+	if !strings.Contains(lastUserMsg, "Write") {
+		t.Errorf("expected continuation message to mention 'Write', got: %s", lastUserMsg)
+	}
+	if !strings.Contains(lastUserMsg, "approved") {
+		t.Errorf("expected continuation message to mention 'approved', got: %s", lastUserMsg)
 	}
 }
 
