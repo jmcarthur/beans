@@ -1,11 +1,12 @@
 ---
 # beans-gwoo
 title: Integrate Iconify for Tailwind CSS v4
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T15:14:04Z
-updated_at: 2026-03-10T15:39:19Z
+updated_at: 2026-03-10T16:18:17Z
+order: zzzc
 ---
 
 Integrate the @iconify/tailwind4 plugin into the frontend for icon support.
