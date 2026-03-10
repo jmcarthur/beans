@@ -141,7 +141,6 @@
 						<div class="flex-1 overflow-auto bg-surface" onclick={handlePlanningClick}>
 							<div
 								class="p-3"
-								onclick={handlePlanningClick}
 								ondragover={(e) => backlogDrag.hoverList(e, null, filteredTopLevelBeans.length)}
 								ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, null)}
 								ondrop={(e) => backlogDrag.drop(e, null, filteredTopLevelBeans)}

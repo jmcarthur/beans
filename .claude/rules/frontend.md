@@ -18,6 +18,10 @@ globs: ["frontend/**"]
 - To initialize client-side state from `localStorage` without a flash of incorrect content, use a **load function** in `+layout.ts` / `+page.ts` with `export const ssr = false`. The load function runs client-side before the component renders, so the component gets the correct initial values. Do **not** try to read localStorage in `onMount` — that fires after the first paint, causing a visible flash.
 - This app uses `ssr = false` in the root `+layout.ts`, so all load functions run client-side only.
 
+## Accessibility
+
+- **Never suppress a11y warnings with `svelte-ignore` comments.** Fix the underlying issue instead — use semantic HTML elements, add proper ARIA roles, or restructure the code to avoid the warning.
+
 ## Styling
 
 - Use **Tailwind CSS v4** utility classes. **Never write raw CSS properties** — always use Tailwind utilities, either inline or via `@apply` in custom classes.

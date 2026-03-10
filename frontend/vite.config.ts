@@ -10,7 +10,7 @@ export default defineConfig({
 
 	build: {
 		// Shiki wasm + grammars produce large chunks; this is an embedded app, not a public site
-		chunkSizeWarningLimit: 1200
+		chunkSizeWarningLimit: 2600
 	},
 
 	server: {
