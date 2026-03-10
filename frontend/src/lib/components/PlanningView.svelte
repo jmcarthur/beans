@@ -1,8 +1,10 @@
 <script lang="ts">
   import { beansStore } from '$lib/beans.svelte';
+  import { AgentChatStore } from '$lib/agentChat.svelte';
   import { ui } from '$lib/uiState.svelte';
   import { backlogDrag } from '$lib/backlogDrag.svelte';
   import { matchesFilter } from '$lib/filter';
+  import { onDestroy } from 'svelte';
   import BeanItem from '$lib/components/BeanItem.svelte';
   import BoardView from '$lib/components/BoardView.svelte';
   import BeanPane from '$lib/components/BeanPane.svelte';
@@ -13,6 +15,18 @@
   import PaneHeader from '$lib/components/PaneHeader.svelte';
 
   const CENTRAL_SESSION_ID = '__central__';
+
+  const agentStore = new AgentChatStore();
+
+  $effect(() => {
+    agentStore.subscribe(CENTRAL_SESSION_ID);
+  });
+
+  onDestroy(() => {
+    agentStore.unsubscribe();
+  });
+
+  const agentBusy = $derived(agentStore.session?.status === 'RUNNING');
 
   let filterInput = $state<FilterInput | null>(null);
 
@@ -78,7 +92,7 @@
     <button
       onclick={() => ui.toggleChanges()}
       class={['btn-toggle ml-3', ui.showChanges ? 'btn-toggle-active' : 'btn-toggle-inactive']}
-      title={ui.showChanges ? 'Hide changes' : 'Show changes'}
+      title={ui.showChanges ? 'Hide status' : 'Show status'}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +104,7 @@
           d="M18 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-3v3h-2v-3H9V9h3V6h2v3h3v2zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm12 9H10v-2h6v2z"
         />
       </svg>
-      Changes
+      Status
     </button>
     <button
       onclick={() => ui.togglePlanningChat()}
@@ -125,13 +139,16 @@
         {#if ui.showChanges && ui.showPlanningChat}
           <SplitPane direction="horizontal" side="end" persistKey="changes-chat-split" initialSize={420}>
             {#snippet children()}
-              <ChangesPane />
+              <ChangesPane
+                {agentBusy}
+                onAction={(msg) => agentStore.sendMessage(CENTRAL_SESSION_ID, msg)}
+              />
             {/snippet}
             {#snippet aside()}
               <div class="flex h-full flex-col border-l border-border bg-surface">
                 <PaneHeader title="Agent" onClose={() => ui.togglePlanningChat()} />
                 <div class="min-h-0 flex-1">
-                  <AgentChat beanId={CENTRAL_SESSION_ID} />
+                  <AgentChat beanId={CENTRAL_SESSION_ID} store={agentStore} />
                 </div>
               </div>
             {/snippet}
@@ -140,11 +157,14 @@
           <div class="flex h-full flex-col border-l border-border bg-surface">
             <PaneHeader title="Agent" onClose={() => ui.togglePlanningChat()} />
             <div class="min-h-0 flex-1">
-              <AgentChat beanId={CENTRAL_SESSION_ID} />
+              <AgentChat beanId={CENTRAL_SESSION_ID} store={agentStore} />
             </div>
           </div>
         {:else if ui.showChanges}
-          <ChangesPane />
+          <ChangesPane
+            {agentBusy}
+            onAction={(msg) => agentStore.sendMessage(CENTRAL_SESSION_ID, msg)}
+          />
         {/if}
       {/snippet}
 

@@ -51,6 +51,10 @@ globs: ["frontend/**"]
 - The central agent chat uses beanId `__central__`.
 - See `e2e/agent-chat.spec.ts` for the pattern.
 
+## Build Warnings
+
+Before finishing any frontend work, run `pnpm build` (or `mise build`) and check for **Svelte compiler warnings**. All warnings must be resolved before the work is considered complete.
+
 ## Bundle Size
 
 The frontend is embedded into the Go binary via `//go:embed`, which stores files **uncompressed**. Keep bundle size minimal:

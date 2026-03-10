@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { Bean } from '$lib/beans.svelte';
+  import { AgentChatStore } from '$lib/agentChat.svelte';
   import { ui } from '$lib/uiState.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
+  import { onDestroy } from 'svelte';
   import SplitPane from './SplitPane.svelte';
   import AgentChat from './AgentChat.svelte';
   import BeanPane from './BeanPane.svelte';
@@ -14,6 +16,18 @@
 
   let { bean }: Props = $props();
 
+  const agentStore = new AgentChatStore();
+
+  $effect(() => {
+    agentStore.subscribe(bean.id);
+  });
+
+  onDestroy(() => {
+    agentStore.unsubscribe();
+  });
+
+  const agentBusy = $derived(agentStore.session?.status === 'RUNNING');
+
   const worktreePath = $derived(
     worktreeStore.worktrees.find((wt) => wt.beanId === bean.id)?.path
   );
@@ -25,7 +39,7 @@
       <button
         onclick={() => ui.toggleChanges()}
         class={['btn-toggle-icon', ui.showChanges ? 'btn-toggle-active' : 'btn-toggle-inactive']}
-        title={ui.showChanges ? 'Hide changes' : 'Show changes'}
+        title={ui.showChanges ? 'Hide status' : 'Show status'}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -52,13 +66,17 @@
         initialSize={480}
       >
         {#snippet children()}
-          <ChangesPane path={worktreePath} />
+          <ChangesPane
+            path={worktreePath}
+            {agentBusy}
+            onAction={(msg) => agentStore.sendMessage(bean.id, msg)}
+          />
         {/snippet}
         {#snippet aside()}
           <div class="flex h-full flex-col border-l border-border bg-surface">
             {@render agentToolbar()}
             <div class="min-h-0 flex-1">
-              <AgentChat beanId={bean.id} />
+              <AgentChat beanId={bean.id} store={agentStore} />
             </div>
           </div>
         {/snippet}
@@ -67,7 +85,7 @@
       <div class="flex h-full flex-col border-l border-border bg-surface">
         {@render agentToolbar()}
         <div class="min-h-0 flex-1">
-          <AgentChat beanId={bean.id} />
+          <AgentChat beanId={bean.id} store={agentStore} />
         </div>
       </div>
     {/if}

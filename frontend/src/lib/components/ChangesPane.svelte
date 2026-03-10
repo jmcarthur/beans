@@ -6,9 +6,11 @@
 
   interface Props {
     path?: string;
+    onAction?: (message: string) => void;
+    agentBusy?: boolean;
   }
 
-  let { path }: Props = $props();
+  let { path, onAction, agentBusy = false }: Props = $props();
 
   const stagedChanges = $derived(changesStore.changes.filter((c) => c.staged));
   const unstagedChanges = $derived(changesStore.changes.filter((c) => !c.staged));
@@ -65,7 +67,7 @@
 </script>
 
 <div class="flex h-full flex-col border-l border-border bg-surface">
-  <PaneHeader title="Changes" onClose={() => ui.toggleChanges()}>
+  <PaneHeader title="Status" onClose={() => ui.toggleChanges()}>
     {#snippet extra()}
       {#if totalCount > 0}
         <span class="ml-1 text-sm text-text-muted">({totalCount})</span>
@@ -120,4 +122,33 @@
       {/if}
     {/if}
   </div>
+
+  {#if onAction}
+    <div class="flex gap-2 border-t border-border px-3 py-2">
+      <button
+        class={[
+          'flex-1 rounded border border-border px-3 py-1.5 text-sm font-medium transition-colors',
+          agentBusy
+            ? 'cursor-not-allowed text-text-faint'
+            : 'cursor-pointer text-text-muted hover:bg-surface-alt hover:text-text'
+        ]}
+        disabled={agentBusy}
+        onclick={() => onAction('Create a commit')}
+      >
+        Commit
+      </button>
+      <button
+        class={[
+          'flex-1 rounded border border-border px-3 py-1.5 text-sm font-medium transition-colors',
+          agentBusy
+            ? 'cursor-not-allowed text-text-faint'
+            : 'cursor-pointer text-text-muted hover:bg-surface-alt hover:text-text'
+        ]}
+        disabled={agentBusy}
+        onclick={() => onAction('Ask a subagent for a thorough code review')}
+      >
+        Review
+      </button>
+    </div>
+  {/if}
 </div>

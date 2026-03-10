@@ -8,23 +8,25 @@
 
   interface Props {
     beanId: string;
+    store?: AgentChatStore;
   }
 
-  let { beanId }: Props = $props();
+  let { beanId, store: externalStore }: Props = $props();
 
-  const store = new AgentChatStore();
+  const ownStore = new AgentChatStore();
+  const store = $derived(externalStore ?? ownStore);
 
   let inputText = $state('');
   let messagesEl: HTMLDivElement | undefined = $state();
   let renderedMessages = $state<Map<string, string>>(new Map());
 
-  // Subscribe to agent session updates
+  // Subscribe to agent session updates (skip if parent owns the store)
   $effect(() => {
-    store.subscribe(beanId);
+    if (!externalStore) ownStore.subscribe(beanId);
   });
 
   onDestroy(() => {
-    store.unsubscribe();
+    if (!externalStore) ownStore.unsubscribe();
   });
 
   const messages = $derived(store.session?.messages ?? []);
