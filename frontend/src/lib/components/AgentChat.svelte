@@ -4,6 +4,7 @@
 	import { ui } from '$lib/uiState.svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { onDestroy } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	interface Props {
 		beanId: string;
@@ -137,10 +138,21 @@
 		}
 	}
 
-	// Auto-scroll to bottom when messages change
+	// Track whether the user is scrolled to the bottom of the messages area.
+	// When they scroll up, we stop auto-scrolling so they can read earlier messages.
+	let stuckToBottom = $state(true);
+
+	function handleMessagesScroll() {
+		if (!messagesEl) return;
+		const { scrollTop, scrollHeight, clientHeight } = messagesEl;
+		stuckToBottom = scrollHeight - scrollTop - clientHeight < 20;
+	}
+
+	// Auto-scroll to bottom when messages change, but only if the user
+	// hasn't scrolled up to read earlier messages.
 	$effect(() => {
 		messages.length;
-		if (messagesEl) {
+		if (messagesEl && stuckToBottom) {
 			requestAnimationFrame(() => {
 				if (messagesEl) {
 					messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -198,12 +210,14 @@
 
 <div class="flex flex-col h-full font-mono text-sm">
 	<!-- Messages area -->
+	<div class="relative flex-1 min-h-0">
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={messagesEl}
-		class="flex-1 overflow-y-auto p-4 space-y-3"
+		class="h-full overflow-y-auto p-4 space-y-3"
 		onclick={handleBeanLinkClick}
+		onscroll={handleMessagesScroll}
 	>
 		{#if messages.length === 0}
 			<div class="flex items-center justify-center h-full text-text-faint">
@@ -248,6 +262,21 @@
 				</div>
 			{/if}
 		{/if}
+	</div>
+
+	{#if !stuckToBottom}
+		<button
+			transition:fade={{ duration: 150 }}
+			class="absolute bottom-3 right-3 size-8 flex items-center justify-center rounded-full bg-surface-alt border border-border text-text-muted hover:text-text shadow-md cursor-pointer transition-colors"
+			onclick={() => {
+				if (messagesEl) {
+					messagesEl.scrollTop = messagesEl.scrollHeight;
+				}
+			}}
+		>
+			&#8595;
+		</button>
+	{/if}
 	</div>
 
 	<!-- Error banner -->
