@@ -279,6 +279,9 @@ func (m *Manager) readOutput(beanID string, stdout io.Reader, workDir string) {
 					// Defer blocking — we need to accumulate tool input first
 					// to extract structured question data.
 					deferredAskUser = true
+				} else if interaction.Type == InteractionEnterPlan {
+					// Auto-approve entering plan mode — no user prompt needed.
+					m.autoApproveModeSwitch(beanID, interaction, workDir)
 				} else {
 					m.handleBlockingTool(beanID, interaction)
 				}
@@ -515,8 +518,8 @@ func (m *Manager) setError(beanID, errMsg string) {
 func blockingInteraction(toolName string, session *Session) *PendingInteraction {
 	switch toolName {
 	case "ExitPlanMode":
-		if session != nil && !session.PlanMode {
-			return nil // already exited plan mode (e.g. after resume)
+		if session != nil && (!session.PlanMode || session.ActMode) {
+			return nil // already exited plan mode or approved (e.g. after resume)
 		}
 		return &PendingInteraction{Type: InteractionExitPlan}
 	case "EnterPlanMode":
@@ -554,15 +557,9 @@ func (m *Manager) handleBlockingTool(beanID string, interaction *PendingInteract
 	s.PendingInteraction = interaction
 	s.Status = StatusIdle
 
-	// Toggle plan mode for mode-switch interactions
-	switch interaction.Type {
-	case InteractionExitPlan:
-		s.PlanMode = false
-	case InteractionEnterPlan:
-		s.PlanMode = true
-	case InteractionAskUser:
-		// No mode change — just pause for user input
-	}
+	// NOTE: Mode is NOT toggled here — that happens when the user approves
+	// or rejects the interaction. This prevents the UI from showing the wrong
+	// mode while the user is still reviewing.
 
 	proc, hasProc := m.processes[beanID]
 	if hasProc {
@@ -577,6 +574,42 @@ func (m *Manager) handleBlockingTool(beanID string, interaction *PendingInteract
 	}
 
 	m.notify(beanID)
+}
+
+// autoApproveModeSwitch handles EnterPlanMode/ExitPlanMode by toggling the mode,
+// killing the current process, and immediately respawning with --resume.
+// No pending interaction is set — the user is not prompted.
+func (m *Manager) autoApproveModeSwitch(beanID string, interaction *PendingInteraction, workDir string) {
+	m.mu.Lock()
+	s, ok := m.sessions[beanID]
+	if !ok {
+		m.mu.Unlock()
+		return
+	}
+
+	switch interaction.Type {
+	case InteractionExitPlan:
+		s.PlanMode = false
+	case InteractionEnterPlan:
+		s.PlanMode = true
+	}
+
+	proc, hasProc := m.processes[beanID]
+	if hasProc {
+		delete(m.processes, beanID)
+	}
+	m.mu.Unlock()
+
+	if hasProc && proc != nil {
+		proc.signal()
+	}
+
+	m.notify(beanID)
+
+	// Respawn with the new mode by sending an auto-approval message.
+	// This runs in a goroutine because we're inside readOutput (same goroutine
+	// as spawnAndRun) and SendMessage will spawn a new process.
+	go m.SendMessage(beanID, workDir, "yes, proceed")
 }
 
 // findPlanFilePath scans tool invocations for a Write to ~/.claude/plans/*.md
@@ -602,7 +635,7 @@ func buildClaudeArgs(session *Session) []string {
 	}
 	if session.ActMode {
 		args = append(args, "--dangerously-skip-permissions")
-	} else {
+	} else if session.PlanMode {
 		args = append(args, "--permission-mode", "plan")
 	}
 	if session.SessionID != "" {

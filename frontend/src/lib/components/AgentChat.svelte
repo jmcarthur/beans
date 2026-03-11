@@ -16,8 +16,8 @@
   const ownStore = new AgentChatStore();
   const store = $derived(externalStore ?? ownStore);
 
-  const inputStorageKey = `agent-chat-input:${beanId}`;
-  let inputText = $state(localStorage.getItem(inputStorageKey) ?? '');
+  const inputStorageKey = $derived(`agent-chat-input:${beanId}`);
+  let inputText = $state('');
   let messagesEl: HTMLDivElement | undefined = $state();
   let renderedMessages = $state<Map<string, string>>(new Map());
 
@@ -61,24 +61,11 @@
 
   function approveInteraction() {
     if (!pendingInteraction) return;
-    store.sendMessage(beanId, 'yes, proceed');
-  }
-
-  function approveInteractionWithAct() {
-    if (!pendingInteraction) return;
+    // Enable act mode so the resumed process gets --dangerously-skip-permissions.
+    // Without this, the process would restart in plan mode and loop.
+    store.setPlanMode(beanId, false);
     store.setActMode(beanId, true);
     store.sendMessage(beanId, 'yes, proceed');
-  }
-
-  function rejectInteraction() {
-    if (!pendingInteraction) return;
-    if (pendingInteraction.type === 'EXIT_PLAN') {
-      // Rejected exiting plan → go back to plan mode
-      store.setPlanMode(beanId, true);
-    } else {
-      // Rejected entering plan → go back to work mode
-      store.setPlanMode(beanId, false);
-    }
   }
 
   // Multi-select state for AskUserQuestion
@@ -110,6 +97,11 @@
     if (multiSelectChoices.size === 0) return;
     store.sendMessage(beanId, [...multiSelectChoices].join(', '));
   }
+
+  // Load persisted composer input when beanId changes
+  $effect(() => {
+    inputText = localStorage.getItem(inputStorageKey) ?? '';
+  });
 
   // Persist composer input to localStorage so it survives navigation/reloads
   $effect(() => {
@@ -278,22 +270,11 @@
     </div>
   {/if}
 
-  <!-- Pending interaction approval (plan mode transitions) -->
-  {#if pendingInteraction && pendingInteraction.type !== 'ASK_USER'}
-    <div
-      class={[
-        'border-t p-3',
-        pendingInteraction.type === 'EXIT_PLAN'
-          ? 'border-status-in-progress-text/20 bg-status-in-progress-bg/50'
-          : 'border-warning/20 bg-warning/5'
-      ]}
-    >
+  <!-- Pending interaction approval (ExitPlanMode — review the plan) -->
+  {#if pendingInteraction?.type === 'EXIT_PLAN'}
+    <div class="border-t border-status-in-progress-text/20 bg-status-in-progress-bg/50 p-3">
       <p class="mb-2 font-mono text-xs text-text-muted">
-        {#if pendingInteraction.type === 'EXIT_PLAN'}
-          Agent wants to leave plan mode and start working.
-        {:else}
-          Agent wants to enter plan mode to analyze before making changes.
-        {/if}
+        Agent wants to leave plan mode and start working.
       </p>
 
       {#if renderedPlanContent}
@@ -304,32 +285,14 @@
         </div>
       {/if}
 
-      <div class="flex gap-2">
+      <div class="flex items-center gap-3">
         <button
           onclick={approveInteraction}
-          class={[
-            'cursor-pointer rounded px-3 py-1 font-mono text-xs transition-colors',
-            pendingInteraction.type === 'EXIT_PLAN'
-              ? 'bg-status-in-progress-text text-white hover:opacity-90'
-              : 'bg-warning text-white hover:opacity-90'
-          ]}
+          class="cursor-pointer rounded bg-status-in-progress-text px-3 py-1 font-mono text-xs text-white transition-colors hover:opacity-90"
         >
           Approve
         </button>
-        {#if pendingInteraction.type === 'EXIT_PLAN'}
-          <button
-            onclick={approveInteractionWithAct}
-            class="cursor-pointer rounded bg-success px-3 py-1 font-mono text-xs text-white transition-colors hover:opacity-90"
-          >
-            Approve + Act
-          </button>
-        {/if}
-        <button
-          onclick={rejectInteraction}
-          class="cursor-pointer rounded border border-border px-3 py-1 font-mono text-xs text-text-muted transition-colors hover:bg-surface-alt"
-        >
-          Reject
-        </button>
+        <span class="font-mono text-xs text-text-muted">or type below to refine the plan</span>
       </div>
     </div>
   {/if}

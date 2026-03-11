@@ -400,8 +400,9 @@ func TestHandleBlockingTool_ExitPlan(t *testing.T) {
 	m.handleBlockingTool("test", &PendingInteraction{Type: InteractionExitPlan})
 
 	s := m.sessions["test"]
-	if s.PlanMode {
-		t.Error("expected PlanMode to be false after ExitPlanMode")
+	// Mode is NOT toggled in handleBlockingTool — that happens on approval
+	if !s.PlanMode {
+		t.Error("expected PlanMode to remain true (toggled on approval, not detection)")
 	}
 	if s.SessionID != "sess-123" {
 		t.Errorf("expected SessionID to be preserved, got %q", s.SessionID)
@@ -436,8 +437,9 @@ func TestHandleBlockingTool_EnterPlan(t *testing.T) {
 	m.handleBlockingTool("test", &PendingInteraction{Type: InteractionEnterPlan})
 
 	s := m.sessions["test"]
-	if !s.PlanMode {
-		t.Error("expected PlanMode to be true after EnterPlanMode")
+	// Mode is NOT toggled in handleBlockingTool — that happens on approval
+	if s.PlanMode {
+		t.Error("expected PlanMode to remain false (toggled on approval, not detection)")
 	}
 	if s.SessionID != "sess-456" {
 		t.Errorf("expected SessionID to be preserved, got %q", s.SessionID)
@@ -497,9 +499,44 @@ func TestHandleBlockingTool_AskUser(t *testing.T) {
 	}
 }
 
+func TestAutoApproveModeSwitch_EnterPlan(t *testing.T) {
+	m := NewManager("", nil)
+	ch := m.Subscribe("test")
+	defer m.Unsubscribe("test", ch)
+
+	m.sessions["test"] = &Session{
+		ID:        "test",
+		Status:    StatusRunning,
+		PlanMode:  false,
+		SessionID: "sess-456",
+		WorkDir:   "/tmp/test",
+	}
+
+	m.autoApproveModeSwitch("test", &PendingInteraction{Type: InteractionEnterPlan}, "/tmp/test")
+
+	s := m.sessions["test"]
+	if !s.PlanMode {
+		t.Error("expected PlanMode to be true after EnterPlanMode")
+	}
+	if s.PendingInteraction != nil {
+		t.Error("expected no PendingInteraction (auto-approved)")
+	}
+	if s.SessionID != "sess-456" {
+		t.Errorf("expected SessionID to be preserved, got %q", s.SessionID)
+	}
+
+	// Should have notified
+	select {
+	case <-ch:
+	default:
+		t.Error("expected notification")
+	}
+}
+
 func TestBlockingInteraction(t *testing.T) {
 	inPlanMode := &Session{PlanMode: true}
 	notInPlanMode := &Session{PlanMode: false}
+	inActMode := &Session{PlanMode: true, ActMode: true}
 
 	tests := []struct {
 		name     string
@@ -509,6 +546,7 @@ func TestBlockingInteraction(t *testing.T) {
 	}{
 		{"ExitPlanMode when in plan mode", "ExitPlanMode", inPlanMode, &PendingInteraction{Type: InteractionExitPlan}},
 		{"ExitPlanMode when not in plan mode (no-op)", "ExitPlanMode", notInPlanMode, nil},
+		{"ExitPlanMode when in act mode (no-op after approval)", "ExitPlanMode", inActMode, nil},
 		{"EnterPlanMode when not in plan mode", "EnterPlanMode", notInPlanMode, &PendingInteraction{Type: InteractionEnterPlan}},
 		{"EnterPlanMode when already in plan mode (no-op)", "EnterPlanMode", inPlanMode, nil},
 		{"AskUserQuestion", "AskUserQuestion", notInPlanMode, &PendingInteraction{Type: InteractionAskUser}},
@@ -592,16 +630,12 @@ func TestBuildClaudeArgs_PlanMode(t *testing.T) {
 }
 
 func TestBuildClaudeArgs_NoPlanMode(t *testing.T) {
-	// When not in plan mode (and not act), should still use plan mode (the only non-act option)
+	// When neither PlanMode nor ActMode, should use Claude's default permissions (no flag)
 	args := buildClaudeArgs(&Session{PlanMode: false})
-	found := false
-	for i, a := range args {
-		if a == "--permission-mode" && i+1 < len(args) && args[i+1] == "plan" {
-			found = true
+	for _, a := range args {
+		if a == "--permission-mode" || a == "--dangerously-skip-permissions" {
+			t.Errorf("expected no permission flags in default mode args, got %v", args)
 		}
-	}
-	if !found {
-		t.Errorf("expected --permission-mode plan in non-act args, got %v", args)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hmans/beans/internal/agent"
 	"github.com/hmans/beans/internal/gitutil"
 	"github.com/hmans/beans/internal/graph/model"
 	"github.com/hmans/beans/pkg/bean"
@@ -604,6 +605,30 @@ func (r *mutationResolver) SetAgentActMode(ctx context.Context, beanID string, a
 		return false, fmt.Errorf("agent manager not available")
 	}
 	if err := r.AgentMgr.SetActMode(beanID, actMode); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// SetAgentPendingInteraction is the resolver for the setAgentPendingInteraction field.
+func (r *mutationResolver) SetAgentPendingInteraction(ctx context.Context, beanID string, typeArg model.InteractionType, planContent *string) (bool, error) {
+	if r.AgentMgr == nil {
+		return false, fmt.Errorf("agent manager not available")
+	}
+	var itype agent.InteractionType
+	switch typeArg {
+	case model.InteractionTypeExitPlan:
+		itype = agent.InteractionExitPlan
+	case model.InteractionTypeEnterPlan:
+		itype = agent.InteractionEnterPlan
+	case model.InteractionTypeAskUser:
+		itype = agent.InteractionAskUser
+	}
+	interaction := &agent.PendingInteraction{Type: itype}
+	if planContent != nil {
+		interaction.PlanContent = *planContent
+	}
+	if err := r.AgentMgr.SetPendingInteraction(beanID, interaction); err != nil {
 		return false, err
 	}
 	return true, nil

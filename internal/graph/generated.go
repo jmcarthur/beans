@@ -127,22 +127,23 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddBlockedBy      func(childComplexity int, id string, targetID string, ifMatch *string) int
-		AddBlocking       func(childComplexity int, id string, targetID string, ifMatch *string) int
-		ArchiveBean       func(childComplexity int, id string) int
-		ClearAgentSession func(childComplexity int, beanID string) int
-		CreateBean        func(childComplexity int, input model.CreateBeanInput) int
-		DeleteBean        func(childComplexity int, id string) int
-		RemoveBlockedBy   func(childComplexity int, id string, targetID string, ifMatch *string) int
-		RemoveBlocking    func(childComplexity int, id string, targetID string, ifMatch *string) int
-		SendAgentMessage  func(childComplexity int, beanID string, message string) int
-		SetAgentActMode   func(childComplexity int, beanID string, actMode bool) int
-		SetAgentPlanMode  func(childComplexity int, beanID string, planMode bool) int
-		SetParent         func(childComplexity int, id string, parentID *string, ifMatch *string) int
-		StartWork         func(childComplexity int, beanID string) int
-		StopAgent         func(childComplexity int, beanID string) int
-		StopWork          func(childComplexity int, beanID string) int
-		UpdateBean        func(childComplexity int, id string, input model.UpdateBeanInput) int
+		AddBlockedBy               func(childComplexity int, id string, targetID string, ifMatch *string) int
+		AddBlocking                func(childComplexity int, id string, targetID string, ifMatch *string) int
+		ArchiveBean                func(childComplexity int, id string) int
+		ClearAgentSession          func(childComplexity int, beanID string) int
+		CreateBean                 func(childComplexity int, input model.CreateBeanInput) int
+		DeleteBean                 func(childComplexity int, id string) int
+		RemoveBlockedBy            func(childComplexity int, id string, targetID string, ifMatch *string) int
+		RemoveBlocking             func(childComplexity int, id string, targetID string, ifMatch *string) int
+		SendAgentMessage           func(childComplexity int, beanID string, message string) int
+		SetAgentActMode            func(childComplexity int, beanID string, actMode bool) int
+		SetAgentPendingInteraction func(childComplexity int, beanID string, typeArg model.InteractionType, planContent *string) int
+		SetAgentPlanMode           func(childComplexity int, beanID string, planMode bool) int
+		SetParent                  func(childComplexity int, id string, parentID *string, ifMatch *string) int
+		StartWork                  func(childComplexity int, beanID string) int
+		StopAgent                  func(childComplexity int, beanID string) int
+		StopWork                   func(childComplexity int, beanID string) int
+		UpdateBean                 func(childComplexity int, id string, input model.UpdateBeanInput) int
 	}
 
 	PendingInteraction struct {
@@ -207,6 +208,7 @@ type MutationResolver interface {
 	StopAgent(ctx context.Context, beanID string) (bool, error)
 	SetAgentPlanMode(ctx context.Context, beanID string, planMode bool) (bool, error)
 	SetAgentActMode(ctx context.Context, beanID string, actMode bool) (bool, error)
+	SetAgentPendingInteraction(ctx context.Context, beanID string, typeArg model.InteractionType, planContent *string) (bool, error)
 	ClearAgentSession(ctx context.Context, beanID string) (bool, error)
 	ArchiveBean(ctx context.Context, id string) (bool, error)
 }
@@ -682,6 +684,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SetAgentActMode(childComplexity, args["beanId"].(string), args["actMode"].(bool)), true
+	case "Mutation.setAgentPendingInteraction":
+		if e.complexity.Mutation.SetAgentPendingInteraction == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAgentPendingInteraction_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAgentPendingInteraction(childComplexity, args["beanId"].(string), args["type"].(model.InteractionType), args["planContent"].(*string)), true
 	case "Mutation.setAgentPlanMode":
 		if e.complexity.Mutation.SetAgentPlanMode == nil {
 			break
@@ -1240,6 +1253,27 @@ func (ec *executionContext) field_Mutation_setAgentActMode_args(ctx context.Cont
 		return nil, err
 	}
 	args["actMode"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setAgentPendingInteraction_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beanId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["beanId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNInteractionType2githubᚗcomᚋhmansᚋbeansᚋinternalᚋgraphᚋmodelᚐInteractionType)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "planContent", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["planContent"] = arg2
 	return args, nil
 }
 
@@ -4133,6 +4167,47 @@ func (ec *executionContext) fieldContext_Mutation_setAgentActMode(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_setAgentActMode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setAgentPendingInteraction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_setAgentPendingInteraction,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().SetAgentPendingInteraction(ctx, fc.Args["beanId"].(string), fc.Args["type"].(model.InteractionType), fc.Args["planContent"].(*string))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setAgentPendingInteraction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setAgentPendingInteraction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -8030,6 +8105,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "setAgentActMode":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setAgentActMode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setAgentPendingInteraction":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setAgentPendingInteraction(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

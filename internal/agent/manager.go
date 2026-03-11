@@ -342,6 +342,27 @@ func (m *Manager) SetActMode(beanID string, actMode bool) error {
 	return nil
 }
 
+// SetPendingInteraction sets a pending interaction on a session, creating the
+// session if it doesn't exist. Used for testing the plan approval UI.
+func (m *Manager) SetPendingInteraction(beanID string, interaction *PendingInteraction) error {
+	m.mu.Lock()
+	session, hasSession := m.sessions[beanID]
+	if !hasSession {
+		session = &Session{
+			ID:           beanID,
+			AgentType:    "claude",
+			Status:       StatusIdle,
+			streamingIdx: -1,
+		}
+		m.sessions[beanID] = session
+	}
+	session.PendingInteraction = interaction
+	m.mu.Unlock()
+
+	m.notify(beanID)
+	return nil
+}
+
 // ClearSession stops any running process, removes the session from memory,
 // and deletes the persisted conversation file.
 func (m *Manager) ClearSession(beanID string) error {

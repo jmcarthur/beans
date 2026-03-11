@@ -169,6 +169,12 @@ type Mutation {
   setAgentActMode(beanId: ID!, actMode: Boolean!): Boolean!
 
   """
+  Set a pending interaction on an agent session (creates session if needed).
+  Used to simulate blocking tool calls for testing the approval UI.
+  """
+  setAgentPendingInteraction(beanId: ID!, type: InteractionType!, planContent: String): Boolean!
+
+  """
   Clear the agent session for a bean. Stops any running process, removes the
   session from memory, and deletes persisted conversation history.
   """
