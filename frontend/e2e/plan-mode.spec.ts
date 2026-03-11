@@ -1,56 +1,24 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { test, expect } from './fixtures';
+import { agentSession } from './agent-session';
 
-/** Send a GraphQL mutation to the beans server. */
-async function gql(baseURL: string, query: string) {
-  const res = await fetch(`${baseURL}/api/graphql`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query })
-  });
-  return res.json();
-}
-
-/** Seed a central conversation JSONL file so the chat has messages to display. */
-function seedConversation(beansPath: string) {
-  const convDir = join(beansPath, '.conversations');
-  mkdirSync(convDir, { recursive: true });
-  writeFileSync(
-    join(convDir, '__central__.jsonl'),
-    [
-      JSON.stringify({ type: 'message', role: 'user', content: 'Plan a refactor' }),
-      JSON.stringify({
-        type: 'message',
-        role: 'assistant',
-        content: 'Here is my plan for the refactor.'
-      })
-    ].join('\n') + '\n'
-  );
-}
+const planMessages = [
+  { role: 'user' as const, content: 'Plan a refactor' },
+  { role: 'assistant' as const, content: 'Here is my plan for the refactor.' }
+];
 
 test.describe('Plan mode approval flow', () => {
   test('ExitPlanMode shows approval UI with plan content and hint text', async ({
     page,
     beans
   }) => {
-    seedConversation(beans.beansPath);
-
-    await page.goto(beans.baseURL + '/');
-    await page.click('button[title="Show chat"]');
-
-    // Wait for seeded messages to load (subscription connects and loads from JSONL)
-    await expect(page.locator('text=Plan a refactor')).toBeVisible({ timeout: 5000 });
-
-    // Now inject the pending interaction — the subscription will push the update
-    await gql(
-      beans.baseURL,
-      `mutation { setAgentPlanMode(beanId: "__central__", planMode: true) }`
-    );
-    await gql(
-      beans.baseURL,
-      `mutation { setAgentPendingInteraction(beanId: "__central__", type: EXIT_PLAN, planContent: "# Refactor Plan\\n\\n1. Extract module\\n2. Update imports") }`
-    );
+    await agentSession('__central__', beans)
+      .withMessages(planMessages)
+      .inPlanMode()
+      .withPendingInteraction({
+        type: 'EXIT_PLAN',
+        planContent: '# Refactor Plan\n\n1. Extract module\n2. Update imports'
+      })
+      .open(page);
 
     // Verify the approval UI is visible
     await expect(
@@ -72,17 +40,10 @@ test.describe('Plan mode approval flow', () => {
   });
 
   test('ENTER_PLAN interaction type does not show approval UI', async ({ page, beans }) => {
-    seedConversation(beans.beansPath);
-
-    await page.goto(beans.baseURL + '/');
-    await page.click('button[title="Show chat"]');
-    await expect(page.locator('text=Plan a refactor')).toBeVisible({ timeout: 5000 });
-
-    // Inject an ENTER_PLAN pending interaction
-    await gql(
-      beans.baseURL,
-      `mutation { setAgentPendingInteraction(beanId: "__central__", type: ENTER_PLAN) }`
-    );
+    await agentSession('__central__', beans)
+      .withMessages(planMessages)
+      .withPendingInteraction({ type: 'ENTER_PLAN' })
+      .open(page);
 
     // Give the subscription time to push the update
     await page.waitForTimeout(500);
@@ -94,17 +55,10 @@ test.describe('Plan mode approval flow', () => {
   });
 
   test('Plan/Act mode toggle reflects session state', async ({ page, beans }) => {
-    seedConversation(beans.beansPath);
-
-    await page.goto(beans.baseURL + '/');
-    await page.click('button[title="Show chat"]');
-    await expect(page.locator('text=Plan a refactor')).toBeVisible({ timeout: 5000 });
-
-    // Put the session in plan mode via mutation
-    await gql(
-      beans.baseURL,
-      `mutation { setAgentPlanMode(beanId: "__central__", planMode: true) }`
-    );
+    await agentSession('__central__', beans)
+      .withMessages(planMessages)
+      .inPlanMode()
+      .open(page);
 
     // The mode toggle should show "Plan" is active
     const planButton = page.getByRole('button', { name: 'Plan', exact: true });

@@ -1,26 +1,14 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { test, expect } from './fixtures';
+import { agentSession } from './agent-session';
 
 test.describe('Agent chat', () => {
   test('Clear button resets the conversation in the UI', async ({ page, beans }) => {
-    // Seed a conversation file directly — the agent manager loads from disk
-    // when a subscription connects with no in-memory session, so no Claude
-    // process is needed.
-    const convDir = join(beans.beansPath, '.conversations');
-    mkdirSync(convDir, { recursive: true });
-    writeFileSync(
-      join(convDir, '__central__.jsonl'),
-      [
-        JSON.stringify({ type: 'message', role: 'user', content: 'hello agent' }),
-        JSON.stringify({ type: 'message', role: 'assistant', content: 'Hi! How can I help?' })
-      ].join('\n') + '\n'
-    );
-
-    await page.goto(beans.baseURL + '/');
-
-    // Open the agent chat panel
-    await page.click('button[title="Show chat"]');
+    await agentSession('__central__', beans)
+      .withMessages([
+        { role: 'user', content: 'hello agent' },
+        { role: 'assistant', content: 'Hi! How can I help?' }
+      ])
+      .open(page);
 
     // Verify the seeded messages are visible
     await expect(page.locator('text=hello agent')).toBeVisible({ timeout: 5000 });
