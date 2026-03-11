@@ -3,6 +3,7 @@
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { agentStatusesStore } from '$lib/agentStatuses.svelte';
   import { ui } from '$lib/uiState.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   interface WorkspaceItem {
     id: string;
@@ -19,6 +20,8 @@
     })
   );
 
+  let confirmingRemoveId = $state<string | null>(null);
+
   async function handleCreateWorktree() {
     const name = window.prompt('Worktree name:');
     if (!name) return;
@@ -26,6 +29,14 @@
     const wt = await worktreeStore.createWorktree(name);
     if (wt) {
       ui.navigateTo(wt.beanId);
+    }
+  }
+
+  async function handleRemoveWorktree(id: string) {
+    confirmingRemoveId = null;
+    const ok = await worktreeStore.removeWorktree(id);
+    if (ok && ui.activeView === id) {
+      ui.navigateTo('planning');
     }
   }
 </script>
@@ -86,20 +97,44 @@
     </div>
 
     {#each workspaceItems as item (item.id)}
-      <button
-        onclick={() => ui.navigateTo(item.id)}
-        class={[
-          'flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
-          ui.activeView === item.id
-            ? 'bg-surface font-medium text-text'
-            : 'text-text-muted hover:bg-surface hover:text-text'
-        ]}
-      >
-        <span class="min-w-0 flex-1 truncate">{item.label}</span>
-        {#if agentStatusesStore.isRunning(item.id)}
-          <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
-        {/if}
-      </button>
+      <div class="group flex items-center">
+        <button
+          onclick={() => ui.navigateTo(item.id)}
+          class={[
+            'flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
+            ui.activeView === item.id
+              ? 'bg-surface font-medium text-text'
+              : 'text-text-muted hover:bg-surface hover:text-text'
+          ]}
+        >
+          <span class="min-w-0 flex-1 truncate">{item.label}</span>
+          {#if agentStatusesStore.isRunning(item.id)}
+            <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
+          {/if}
+        </button>
+        <button
+          onclick={(e) => {
+            e.stopPropagation();
+            confirmingRemoveId = item.id;
+          }}
+          class="mr-1 cursor-pointer rounded p-1 text-text-faint opacity-0 transition-opacity hover:bg-surface hover:text-danger group-hover:opacity-100"
+          aria-label="Destroy worktree"
+        >
+          <span class="icon-[uil--archive] block size-3.5"></span>
+        </button>
+      </div>
     {/each}
   </div>
+
+  {#if confirmingRemoveId}
+    {@const label = workspaceItems.find((w) => w.id === confirmingRemoveId)?.label ?? 'this worktree'}
+    <ConfirmModal
+      title="Destroy Worktree"
+      message={`Are you sure you want to destroy the worktree for "${label}"? This cannot be undone.`}
+      confirmLabel="Destroy"
+      danger
+      onConfirm={() => handleRemoveWorktree(confirmingRemoveId!)}
+      onCancel={() => (confirmingRemoveId = null)}
+    />
+  {/if}
 </nav>
