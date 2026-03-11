@@ -16,7 +16,8 @@
   const ownStore = new AgentChatStore();
   const store = $derived(externalStore ?? ownStore);
 
-  let inputText = $state('');
+  const inputStorageKey = `agent-chat-input:${beanId}`;
+  let inputText = $state(localStorage.getItem(inputStorageKey) ?? '');
   let messagesEl: HTMLDivElement | undefined = $state();
   let renderedMessages = $state<Map<string, string>>(new Map());
 
@@ -79,6 +80,15 @@
       store.setPlanMode(beanId, false);
     }
   }
+
+  // Persist composer input to localStorage so it survives navigation/reloads
+  $effect(() => {
+    if (inputText) {
+      localStorage.setItem(inputStorageKey, inputText);
+    } else {
+      localStorage.removeItem(inputStorageKey);
+    }
+  });
 
   // Track whether the user is scrolled to the bottom of the messages area.
   // When they scroll up, we stop auto-scrolling so they can read earlier messages.
