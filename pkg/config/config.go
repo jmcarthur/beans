@@ -90,6 +90,11 @@ type WorktreeConfig struct {
 
 // AgentConfig defines settings for agent sessions.
 type AgentConfig struct {
+	// Enabled controls whether agent functionality is available.
+	// When false, the web UI hides agent chats, status panes, and worktree features.
+	// Default: true
+	Enabled *bool `yaml:"enabled,omitempty"`
+
 	// DefaultMode is the default mode for new agent sessions.
 	// Valid values: "act" (fully autonomous), "plan" (read-only).
 	// Default: "act"
@@ -145,6 +150,7 @@ func Default() *Config {
 			BaseRef: DefaultWorktreeBaseRef,
 		},
 		Agent: AgentConfig{
+			Enabled:     boolPtr(true),
 			DefaultMode: PermissionModeAct,
 		},
 		Server: ServerConfig{
@@ -368,6 +374,11 @@ func (c *Config) toYAMLNode() *yaml.Node {
 
 	// Build the agent mapping
 	agentMapping := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	if c.Agent.Enabled != nil {
+		key := strNode("enabled")
+		key.HeadComment = "Enable agent functionality in the web UI (true, false)"
+		agentMapping.Content = append(agentMapping.Content, key, scalar(fmt.Sprintf("%t", *c.Agent.Enabled), "!!bool"))
+	}
 	if c.Agent.DefaultMode != "" {
 		key := strNode("default_mode")
 		key.HeadComment = "Default mode for agent sessions (act, plan)"
@@ -586,6 +597,9 @@ func (c *Config) PriorityList() string {
 	return strings.Join(names, ", ")
 }
 
+// boolPtr returns a pointer to the given bool value.
+func boolPtr(b bool) *bool { return &b }
+
 // DefaultWorktreeBaseRef is the default base ref for new worktree branches.
 const DefaultWorktreeBaseRef = "main"
 
@@ -596,6 +610,15 @@ func (c *Config) GetWorktreeBaseRef() string {
 		return DefaultWorktreeBaseRef
 	}
 	return c.Worktree.BaseRef
+}
+
+// IsAgentEnabled returns whether agent functionality is enabled.
+// Returns true if not explicitly set.
+func (c *Config) IsAgentEnabled() bool {
+	if c.Agent.Enabled == nil {
+		return true
+	}
+	return *c.Agent.Enabled
 }
 
 // GetDefaultMode returns the configured default permission mode for agent sessions.

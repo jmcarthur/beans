@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Bean } from '$lib/beans.svelte';
   import { beansStore } from '$lib/beans.svelte';
+  import { configStore } from '$lib/config.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { statusColors, typeColors, priorityColors } from '$lib/styles';
   import { client } from '$lib/graphqlClient';
@@ -33,7 +34,7 @@
   }
 
   const worktree = $derived(worktreeStore.worktrees.find((wt) => wt.beanId === bean.id));
-  const canStartWork = $derived(!worktree);
+  const canStartWork = $derived(configStore.agentEnabled && !worktree);
 
   let startingWork = $state(false);
   let removingWorktree = $state(false);

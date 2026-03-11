@@ -903,6 +903,15 @@ func (r *queryResolver) AgentActions(ctx context.Context, beanID string) ([]*mod
 	return result, nil
 }
 
+// AgentEnabled is the resolver for the agentEnabled field.
+func (r *queryResolver) AgentEnabled(ctx context.Context) (bool, error) {
+	cfg := r.Core.Config()
+	if cfg == nil {
+		return true, nil
+	}
+	return cfg.IsAgentEnabled(), nil
+}
+
 // BeanChanged is the resolver for the beanChanged field.
 func (r *subscriptionResolver) BeanChanged(ctx context.Context, includeInitial *bool) (<-chan *model.BeanChangeEvent, error) {
 	// Subscribe to bean events from beancore

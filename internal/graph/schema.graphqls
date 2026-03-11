@@ -37,6 +37,12 @@ type Query {
   Get available agent actions for a bean
   """
   agentActions(beanId: ID!): [AgentAction!]!
+
+  """
+  Whether agent functionality is enabled in the project configuration.
+  When false, the UI should hide agent chats, status panes, and worktree features.
+  """
+  agentEnabled: Boolean!
 }
 
 type Subscription {

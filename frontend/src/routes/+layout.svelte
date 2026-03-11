@@ -7,6 +7,7 @@
   import { beansStore } from '$lib/beans.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { agentStatusesStore } from '$lib/agentStatuses.svelte';
+  import { configStore } from '$lib/config.svelte';
   import { ui } from '$lib/uiState.svelte';
   import BeanForm from '$lib/components/BeanForm.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
@@ -31,14 +32,15 @@
     ui.syncFromUrl(page.url.pathname);
   });
 
-  // Fall back to planning view if the active workspace's worktree is removed
+  // Fall back to planning view if agents are disabled or the workspace's worktree is removed
   $effect(() => {
-    if (!ui.isPlanning && !worktreeStore.hasWorktree(ui.activeView)) {
+    if (!ui.isPlanning && (!configStore.agentEnabled || !worktreeStore.hasWorktree(ui.activeView))) {
       ui.navigateTo('planning');
     }
   });
 
   onMount(() => {
+    configStore.load();
     beansStore.subscribe();
     worktreeStore.subscribe();
     agentStatusesStore.subscribe();

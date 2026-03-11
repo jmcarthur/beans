@@ -964,6 +964,7 @@ func TestSaveOmitsEmptyAgentSection(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	cfg := DefaultWithPrefix("test-")
+	cfg.Agent.Enabled = nil    // explicitly clear
 	cfg.Agent.DefaultMode = "" // explicitly clear
 	cfg.SetConfigDir(tmpDir)
 
@@ -1002,6 +1003,55 @@ func TestDefaultIncludesAgentSection(t *testing.T) {
 	}
 	if !strings.Contains(content, "default_mode: act") {
 		t.Error("expected default config to include default_mode: act")
+	}
+	if !strings.Contains(content, "enabled: true") {
+		t.Error("expected default config to include enabled: true")
+	}
+}
+
+func TestIsAgentEnabled(t *testing.T) {
+	// Default config should have agent enabled
+	cfg := Default()
+	if !cfg.IsAgentEnabled() {
+		t.Error("expected default config to have agent enabled")
+	}
+
+	// Explicitly disabled
+	f := false
+	cfg.Agent.Enabled = &f
+	if cfg.IsAgentEnabled() {
+		t.Error("expected agent to be disabled when set to false")
+	}
+
+	// Nil (unset) should default to true
+	cfg.Agent.Enabled = nil
+	if !cfg.IsAgentEnabled() {
+		t.Error("expected agent to be enabled when Enabled is nil")
+	}
+}
+
+func TestLoadAgentEnabled(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write config with agent.enabled: false
+	configContent := `
+beans:
+    prefix: "test-"
+    id_length: 4
+agent:
+    enabled: false
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, ConfigFileName), []byte(configContent), 0644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg, err := Load(filepath.Join(tmpDir, ConfigFileName))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.IsAgentEnabled() {
+		t.Error("expected agent to be disabled when config has enabled: false")
 	}
 }
 

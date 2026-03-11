@@ -2,6 +2,7 @@
   import { beansStore } from '$lib/beans.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { agentStatusesStore } from '$lib/agentStatuses.svelte';
+  import { configStore } from '$lib/config.svelte';
   import { ui } from '$lib/uiState.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
 
@@ -70,60 +71,62 @@
         />
       </svg>
       Planning
-      {#if agentStatusesStore.isRunning('__central__')}
+      {#if configStore.agentEnabled && agentStatusesStore.isRunning('__central__')}
         <span class="ml-auto h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
       {/if}
     </button>
 
-    <!-- Workspaces section (always visible) -->
-    <div class="mt-4 mb-1 flex items-center justify-between px-3">
-      <span class="text-xs font-medium tracking-wider text-text-faint uppercase">
-        Workspaces
-      </span>
-      <button
-        onclick={handleCreateWorktree}
-        class="cursor-pointer rounded p-0.5 text-text-faint transition-colors hover:bg-surface hover:text-text"
-        aria-label="Create worktree"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 16 16"
-          fill="currentColor"
-          class="h-3.5 w-3.5"
-        >
-          <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-        </svg>
-      </button>
-    </div>
-
-    {#each workspaceItems as item (item.id)}
-      <div class="group flex items-center">
+    {#if configStore.agentEnabled}
+      <!-- Workspaces section -->
+      <div class="mt-4 mb-1 flex items-center justify-between px-3">
+        <span class="text-xs font-medium tracking-wider text-text-faint uppercase">
+          Workspaces
+        </span>
         <button
-          onclick={() => ui.navigateTo(item.id)}
-          class={[
-            'flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
-            ui.activeView === item.id
-              ? 'bg-surface font-medium text-text'
-              : 'text-text-muted hover:bg-surface hover:text-text'
-          ]}
+          onclick={handleCreateWorktree}
+          class="cursor-pointer rounded p-0.5 text-text-faint transition-colors hover:bg-surface hover:text-text"
+          aria-label="Create worktree"
         >
-          <span class="min-w-0 flex-1 truncate">{item.label}</span>
-          {#if agentStatusesStore.isRunning(item.id)}
-            <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
-          {/if}
-        </button>
-        <button
-          onclick={(e) => {
-            e.stopPropagation();
-            confirmingRemoveId = item.id;
-          }}
-          class="mr-1 cursor-pointer rounded p-1 text-text-faint opacity-0 transition-opacity hover:bg-surface hover:text-danger group-hover:opacity-100"
-          aria-label="Destroy worktree"
-        >
-          <span class="icon-[uil--archive] block size-3.5"></span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            class="h-3.5 w-3.5"
+          >
+            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+          </svg>
         </button>
       </div>
-    {/each}
+
+      {#each workspaceItems as item (item.id)}
+        <div class="group flex items-center">
+          <button
+            onclick={() => ui.navigateTo(item.id)}
+            class={[
+              'flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
+              ui.activeView === item.id
+                ? 'bg-surface font-medium text-text'
+                : 'text-text-muted hover:bg-surface hover:text-text'
+            ]}
+          >
+            <span class="min-w-0 flex-1 truncate">{item.label}</span>
+            {#if agentStatusesStore.isRunning(item.id)}
+              <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
+            {/if}
+          </button>
+          <button
+            onclick={(e) => {
+              e.stopPropagation();
+              confirmingRemoveId = item.id;
+            }}
+            class="mr-1 cursor-pointer rounded p-1 text-text-faint opacity-0 transition-opacity hover:bg-surface hover:text-danger group-hover:opacity-100"
+            aria-label="Destroy worktree"
+          >
+            <span class="icon-[uil--archive] block size-3.5"></span>
+          </button>
+        </div>
+      {/each}
+    {/if}
   </div>
 
   {#if confirmingRemoveId}
