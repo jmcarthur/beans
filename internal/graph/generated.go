@@ -62,6 +62,7 @@ type ComplexityRoot struct {
 	}
 
 	AgentSession struct {
+		ActMode            func(childComplexity int) int
 		AgentType          func(childComplexity int) int
 		BeanID             func(childComplexity int) int
 		Error              func(childComplexity int) int
@@ -71,7 +72,6 @@ type ComplexityRoot struct {
 		Status             func(childComplexity int) int
 		SystemStatus       func(childComplexity int) int
 		WorkDir            func(childComplexity int) int
-		YoloMode           func(childComplexity int) int
 	}
 
 	Bean struct {
@@ -122,10 +122,9 @@ type ComplexityRoot struct {
 		DeleteBean        func(childComplexity int, id string) int
 		RemoveBlockedBy   func(childComplexity int, id string, targetID string, ifMatch *string) int
 		RemoveBlocking    func(childComplexity int, id string, targetID string, ifMatch *string) int
-		ResolvePermission func(childComplexity int, beanID string, allow bool, always *bool) int
 		SendAgentMessage  func(childComplexity int, beanID string, message string) int
+		SetAgentActMode   func(childComplexity int, beanID string, actMode bool) int
 		SetAgentPlanMode  func(childComplexity int, beanID string, planMode bool) int
-		SetAgentYoloMode  func(childComplexity int, beanID string, yoloMode bool) int
 		SetParent         func(childComplexity int, id string, parentID *string, ifMatch *string) int
 		StartWork         func(childComplexity int, beanID string) int
 		StopAgent         func(childComplexity int, beanID string) int
@@ -135,8 +134,6 @@ type ComplexityRoot struct {
 
 	PendingInteraction struct {
 		PlanContent func(childComplexity int) int
-		ToolInput   func(childComplexity int) int
-		ToolName    func(childComplexity int) int
 		Type        func(childComplexity int) int
 	}
 
@@ -188,9 +185,8 @@ type MutationResolver interface {
 	SendAgentMessage(ctx context.Context, beanID string, message string) (bool, error)
 	StopAgent(ctx context.Context, beanID string) (bool, error)
 	SetAgentPlanMode(ctx context.Context, beanID string, planMode bool) (bool, error)
-	SetAgentYoloMode(ctx context.Context, beanID string, yoloMode bool) (bool, error)
+	SetAgentActMode(ctx context.Context, beanID string, actMode bool) (bool, error)
 	ClearAgentSession(ctx context.Context, beanID string) (bool, error)
-	ResolvePermission(ctx context.Context, beanID string, allow bool, always *bool) (bool, error)
 	ArchiveBean(ctx context.Context, id string) (bool, error)
 }
 type QueryResolver interface {
@@ -252,6 +248,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.AgentMessage.Role(childComplexity), true
 
+	case "AgentSession.actMode":
+		if e.complexity.AgentSession.ActMode == nil {
+			break
+		}
+
+		return e.complexity.AgentSession.ActMode(childComplexity), true
 	case "AgentSession.agentType":
 		if e.complexity.AgentSession.AgentType == nil {
 			break
@@ -306,12 +308,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AgentSession.WorkDir(childComplexity), true
-	case "AgentSession.yoloMode":
-		if e.complexity.AgentSession.YoloMode == nil {
-			break
-		}
-
-		return e.complexity.AgentSession.YoloMode(childComplexity), true
 
 	case "Bean.blockedBy":
 		if e.complexity.Bean.BlockedBy == nil {
@@ -599,17 +595,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.RemoveBlocking(childComplexity, args["id"].(string), args["targetId"].(string), args["ifMatch"].(*string)), true
-	case "Mutation.resolvePermission":
-		if e.complexity.Mutation.ResolvePermission == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_resolvePermission_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.ResolvePermission(childComplexity, args["beanId"].(string), args["allow"].(bool), args["always"].(*bool)), true
 	case "Mutation.sendAgentMessage":
 		if e.complexity.Mutation.SendAgentMessage == nil {
 			break
@@ -621,6 +606,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SendAgentMessage(childComplexity, args["beanId"].(string), args["message"].(string)), true
+	case "Mutation.setAgentActMode":
+		if e.complexity.Mutation.SetAgentActMode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAgentActMode_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAgentActMode(childComplexity, args["beanId"].(string), args["actMode"].(bool)), true
 	case "Mutation.setAgentPlanMode":
 		if e.complexity.Mutation.SetAgentPlanMode == nil {
 			break
@@ -632,17 +628,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.SetAgentPlanMode(childComplexity, args["beanId"].(string), args["planMode"].(bool)), true
-	case "Mutation.setAgentYoloMode":
-		if e.complexity.Mutation.SetAgentYoloMode == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_setAgentYoloMode_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.SetAgentYoloMode(childComplexity, args["beanId"].(string), args["yoloMode"].(bool)), true
 	case "Mutation.setParent":
 		if e.complexity.Mutation.SetParent == nil {
 			break
@@ -705,18 +690,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PendingInteraction.PlanContent(childComplexity), true
-	case "PendingInteraction.toolInput":
-		if e.complexity.PendingInteraction.ToolInput == nil {
-			break
-		}
-
-		return e.complexity.PendingInteraction.ToolInput(childComplexity), true
-	case "PendingInteraction.toolName":
-		if e.complexity.PendingInteraction.ToolName == nil {
-			break
-		}
-
-		return e.complexity.PendingInteraction.ToolName(childComplexity), true
 	case "PendingInteraction.type":
 		if e.complexity.PendingInteraction.Type == nil {
 			break
@@ -1142,27 +1115,6 @@ func (ec *executionContext) field_Mutation_removeBlocking_args(ctx context.Conte
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_resolvePermission_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beanId", ec.unmarshalNID2string)
-	if err != nil {
-		return nil, err
-	}
-	args["beanId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "allow", ec.unmarshalNBoolean2bool)
-	if err != nil {
-		return nil, err
-	}
-	args["allow"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "always", ec.unmarshalOBoolean2ᚖbool)
-	if err != nil {
-		return nil, err
-	}
-	args["always"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_sendAgentMessage_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1179,6 +1131,22 @@ func (ec *executionContext) field_Mutation_sendAgentMessage_args(ctx context.Con
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_setAgentActMode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beanId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["beanId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "actMode", ec.unmarshalNBoolean2bool)
+	if err != nil {
+		return nil, err
+	}
+	args["actMode"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_setAgentPlanMode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1192,22 +1160,6 @@ func (ec *executionContext) field_Mutation_setAgentPlanMode_args(ctx context.Con
 		return nil, err
 	}
 	args["planMode"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_setAgentYoloMode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "beanId", ec.unmarshalNID2string)
-	if err != nil {
-		return nil, err
-	}
-	args["beanId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "yoloMode", ec.unmarshalNBoolean2bool)
-	if err != nil {
-		return nil, err
-	}
-	args["yoloMode"] = arg1
 	return args, nil
 }
 
@@ -1706,14 +1658,14 @@ func (ec *executionContext) fieldContext_AgentSession_planMode(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _AgentSession_yoloMode(ctx context.Context, field graphql.CollectedField, obj *model.AgentSession) (ret graphql.Marshaler) {
+func (ec *executionContext) _AgentSession_actMode(ctx context.Context, field graphql.CollectedField, obj *model.AgentSession) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_AgentSession_yoloMode,
+		ec.fieldContext_AgentSession_actMode,
 		func(ctx context.Context) (any, error) {
-			return obj.YoloMode, nil
+			return obj.ActMode, nil
 		},
 		nil,
 		ec.marshalNBoolean2bool,
@@ -1722,7 +1674,7 @@ func (ec *executionContext) _AgentSession_yoloMode(ctx context.Context, field gr
 	)
 }
 
-func (ec *executionContext) fieldContext_AgentSession_yoloMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_AgentSession_actMode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AgentSession",
 		Field:      field,
@@ -1792,10 +1744,6 @@ func (ec *executionContext) fieldContext_AgentSession_pendingInteraction(_ conte
 				return ec.fieldContext_PendingInteraction_type(ctx, field)
 			case "planContent":
 				return ec.fieldContext_PendingInteraction_planContent(ctx, field)
-			case "toolName":
-				return ec.fieldContext_PendingInteraction_toolName(ctx, field)
-			case "toolInput":
-				return ec.fieldContext_PendingInteraction_toolInput(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PendingInteraction", field.Name)
 		},
@@ -3833,15 +3781,15 @@ func (ec *executionContext) fieldContext_Mutation_setAgentPlanMode(ctx context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_setAgentYoloMode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_setAgentActMode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Mutation_setAgentYoloMode,
+		ec.fieldContext_Mutation_setAgentActMode,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().SetAgentYoloMode(ctx, fc.Args["beanId"].(string), fc.Args["yoloMode"].(bool))
+			return ec.resolvers.Mutation().SetAgentActMode(ctx, fc.Args["beanId"].(string), fc.Args["actMode"].(bool))
 		},
 		nil,
 		ec.marshalNBoolean2bool,
@@ -3850,7 +3798,7 @@ func (ec *executionContext) _Mutation_setAgentYoloMode(ctx context.Context, fiel
 	)
 }
 
-func (ec *executionContext) fieldContext_Mutation_setAgentYoloMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_setAgentActMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -3867,7 +3815,7 @@ func (ec *executionContext) fieldContext_Mutation_setAgentYoloMode(ctx context.C
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setAgentYoloMode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_setAgentActMode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3909,47 +3857,6 @@ func (ec *executionContext) fieldContext_Mutation_clearAgentSession(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_clearAgentSession_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_resolvePermission(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_resolvePermission,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().ResolvePermission(ctx, fc.Args["beanId"].(string), fc.Args["allow"].(bool), fc.Args["always"].(*bool))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_resolvePermission(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_resolvePermission_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4043,64 +3950,6 @@ func (ec *executionContext) _PendingInteraction_planContent(ctx context.Context,
 }
 
 func (ec *executionContext) fieldContext_PendingInteraction_planContent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PendingInteraction",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PendingInteraction_toolName(ctx context.Context, field graphql.CollectedField, obj *model.PendingInteraction) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_PendingInteraction_toolName,
-		func(ctx context.Context) (any, error) {
-			return obj.ToolName, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_PendingInteraction_toolName(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "PendingInteraction",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _PendingInteraction_toolInput(ctx context.Context, field graphql.CollectedField, obj *model.PendingInteraction) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_PendingInteraction_toolInput,
-		func(ctx context.Context) (any, error) {
-			return obj.ToolInput, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_PendingInteraction_toolInput(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PendingInteraction",
 		Field:      field,
@@ -4363,8 +4212,8 @@ func (ec *executionContext) fieldContext_Query_agentSession(ctx context.Context,
 				return ec.fieldContext_AgentSession_error(ctx, field)
 			case "planMode":
 				return ec.fieldContext_AgentSession_planMode(ctx, field)
-			case "yoloMode":
-				return ec.fieldContext_AgentSession_yoloMode(ctx, field)
+			case "actMode":
+				return ec.fieldContext_AgentSession_actMode(ctx, field)
 			case "systemStatus":
 				return ec.fieldContext_AgentSession_systemStatus(ctx, field)
 			case "pendingInteraction":
@@ -4675,8 +4524,8 @@ func (ec *executionContext) fieldContext_Subscription_agentSessionChanged(ctx co
 				return ec.fieldContext_AgentSession_error(ctx, field)
 			case "planMode":
 				return ec.fieldContext_AgentSession_planMode(ctx, field)
-			case "yoloMode":
-				return ec.fieldContext_AgentSession_yoloMode(ctx, field)
+			case "actMode":
+				return ec.fieldContext_AgentSession_actMode(ctx, field)
 			case "systemStatus":
 				return ec.fieldContext_AgentSession_systemStatus(ctx, field)
 			case "pendingInteraction":
@@ -6942,8 +6791,8 @@ func (ec *executionContext) _AgentSession(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "yoloMode":
-			out.Values[i] = ec._AgentSession_yoloMode(ctx, field, obj)
+		case "actMode":
+			out.Values[i] = ec._AgentSession_actMode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7599,9 +7448,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "setAgentYoloMode":
+		case "setAgentActMode":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setAgentYoloMode(ctx, field)
+				return ec._Mutation_setAgentActMode(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -7609,13 +7458,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "clearAgentSession":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_clearAgentSession(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "resolvePermission":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_resolvePermission(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -7668,10 +7510,6 @@ func (ec *executionContext) _PendingInteraction(ctx context.Context, sel ast.Sel
 			}
 		case "planContent":
 			out.Values[i] = ec._PendingInteraction_planContent(ctx, field, obj)
-		case "toolName":
-			out.Values[i] = ec._PendingInteraction_toolName(ctx, field, obj)
-		case "toolInput":
-			out.Values[i] = ec._PendingInteraction_toolInput(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

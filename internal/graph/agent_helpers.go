@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/hmans/beans/internal/agent"
@@ -52,25 +51,12 @@ func agentSessionToModel(s *agent.Session) *model.AgentSession {
 			itype = model.InteractionTypeEnterPlan
 		case agent.InteractionAskUser:
 			itype = model.InteractionTypeAskUser
-		case agent.InteractionPermission:
-			itype = model.InteractionTypePermissionRequest
 		}
 		var planContent *string
 		if s.PendingInteraction.PlanContent != "" {
 			planContent = &s.PendingInteraction.PlanContent
 		}
 		pending = &model.PendingInteraction{Type: itype, PlanContent: planContent}
-
-		// Populate permission-specific fields from denied tools
-		if len(s.PendingInteraction.PermissionDenials) > 0 {
-			first := s.PendingInteraction.PermissionDenials[0]
-			pending.ToolName = &first.ToolName
-			if first.ToolInput != nil {
-				inputJSON, _ := json.Marshal(first.ToolInput)
-				inputStr := string(inputJSON)
-				pending.ToolInput = &inputStr
-			}
-		}
 	}
 
 	var sysStatus *string
@@ -90,7 +76,7 @@ func agentSessionToModel(s *agent.Session) *model.AgentSession {
 		Messages:           msgs,
 		Error:              errPtr,
 		PlanMode:           s.PlanMode,
-		YoloMode:           s.YoloMode,
+		ActMode:            s.ActMode,
 		SystemStatus:       sysStatus,
 		PendingInteraction: pending,
 		WorkDir:            workDir,

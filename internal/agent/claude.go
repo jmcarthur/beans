@@ -388,18 +388,6 @@ func (m *Manager) readOutput(beanID string, stdout io.Reader, workDir string) {
 				s.streamingIdx = -1
 				s.Status = StatusIdle
 				s.SystemStatus = ""
-
-				// If there were permission denials, set a pending interaction
-				// so the UI can show the approval dialog
-				if len(ev.PermissionDenials) > 0 {
-					for _, d := range ev.PermissionDenials {
-						log.Printf("[agent:%s] permission denied: tool=%s", beanID, d.ToolName)
-					}
-					s.PendingInteraction = &PendingInteraction{
-						Type:              InteractionPermission,
-						PermissionDenials: ev.PermissionDenials,
-					}
-				}
 			}
 			m.mu.Unlock()
 			m.notify(beanID)
@@ -549,18 +537,10 @@ func buildClaudeArgs(session *Session) []string {
 		"--input-format", "stream-json",
 		"--include-partial-messages",
 	}
-	if session.YoloMode {
+	if session.ActMode {
 		args = append(args, "--dangerously-skip-permissions")
-	} else if session.PlanMode {
-		args = append(args, "--permission-mode", "plan")
 	} else {
-		// Act mode: auto-approve file reads/edits, prompt for Bash and network tools.
-		args = append(args, "--permission-mode", "acceptEdits")
-		args = append(args, "--allowedTools", "Bash(beans:*)")
-	}
-	// Pass any user-approved tool patterns (accumulated from permission denials).
-	for _, tool := range session.AllowedTools {
-		args = append(args, "--allowedTools", tool)
+		args = append(args, "--permission-mode", "plan")
 	}
 	if session.SessionID != "" {
 		args = append(args, "--resume", session.SessionID)

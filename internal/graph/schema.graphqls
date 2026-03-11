@@ -163,22 +163,16 @@ type Mutation {
   setAgentPlanMode(beanId: ID!, planMode: Boolean!): Boolean!
 
   """
-  Set YOLO mode for an agent session. YOLO mode makes the agent fully autonomous
+  Set act mode for an agent session. Act mode makes the agent fully autonomous
   (no permission prompts). Kills any running process since the flag requires respawning.
   """
-  setAgentYoloMode(beanId: ID!, yoloMode: Boolean!): Boolean!
+  setAgentActMode(beanId: ID!, actMode: Boolean!): Boolean!
 
   """
   Clear the agent session for a bean. Stops any running process, removes the
   session from memory, and deletes persisted conversation history.
   """
   clearAgentSession(beanId: ID!): Boolean!
-
-  """
-  Resolve a pending permission request. When allow is true, the tool call proceeds.
-  When always is true, Claude Code remembers the permission for the session.
-  """
-  resolvePermission(beanId: ID!, allow: Boolean!, always: Boolean): Boolean!
 
   """
   Archive a bean by moving it to the archive directory.
@@ -447,8 +441,8 @@ type AgentSession {
   error: String
   "Whether the agent is in plan mode (read-only)"
   planMode: Boolean!
-  "Whether the agent is in YOLO mode (fully autonomous, no permission prompts)"
-  yoloMode: Boolean!
+  "Whether the agent is in act mode (fully autonomous, no permission prompts)"
+  actMode: Boolean!
   "Transient system status (e.g. 'compacting'), null when idle"
   systemStatus: String
   "Pending blocking interaction awaiting user response"
@@ -465,10 +459,6 @@ type PendingInteraction {
   type: InteractionType!
   "Plan file content (for EXIT_PLAN only)"
   planContent: String
-  "Tool name requesting permission (for PERMISSION_REQUEST only)"
-  toolName: String
-  "Tool input as JSON string (for PERMISSION_REQUEST only)"
-  toolInput: String
 }
 
 """
@@ -478,7 +468,6 @@ enum InteractionType {
   EXIT_PLAN
   ENTER_PLAN
   ASK_USER
-  PERMISSION_REQUEST
 }
 
 """
