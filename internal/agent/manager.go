@@ -1,9 +1,7 @@
 package agent
 
 import (
-	"fmt"
 	"log"
-	"strings"
 	"sync"
 )
 
@@ -15,8 +13,7 @@ type ContextProvider func(beanID string) string
 type DefaultPermissionMode string
 
 const (
-	DefaultModeYolo DefaultPermissionMode = "yolo"
-	DefaultModeAct  DefaultPermissionMode = "act"
+	DefaultModeAct DefaultPermissionMode = "act"
 	DefaultModePlan DefaultPermissionMode = "plan"
 )
 
@@ -39,10 +36,10 @@ type Manager struct {
 
 // NewManager creates a new agent session manager.
 // If beansDir is non-empty, conversations are persisted to .beans/conversations/.
-// permissionMode controls the default mode for new sessions ("yolo", "act", "plan").
-// If empty, defaults to "yolo".
+// permissionMode controls the default mode for new sessions ("act", "plan").
+// If empty, defaults to "act".
 func NewManager(beansDir string, contextProvider ContextProvider, permissionMode ...DefaultPermissionMode) *Manager {
-	mode := DefaultModeYolo
+	mode := DefaultModeAct
 	if len(permissionMode) > 0 && permissionMode[0] != "" {
 		mode = permissionMode[0]
 	}
@@ -304,9 +301,9 @@ func (m *Manager) SetPlanMode(beanID string, planMode bool) error {
 	return nil
 }
 
-// SetYoloMode toggles YOLO mode for a session, killing any running process
+// SetActMode toggles act mode for a session, killing any running process
 // since --dangerously-skip-permissions is a startup flag that requires respawning.
-func (m *Manager) SetYoloMode(beanID string, yoloMode bool) error {
+func (m *Manager) SetActMode(beanID string, actMode bool) error {
 	m.mu.Lock()
 	session, hasSession := m.sessions[beanID]
 	if !hasSession {
@@ -314,7 +311,7 @@ func (m *Manager) SetYoloMode(beanID string, yoloMode bool) error {
 			ID:           beanID,
 			AgentType:    "claude",
 			Status:       StatusIdle,
-			YoloMode:     yoloMode,
+			ActMode:     actMode,
 			streamingIdx: -1,
 		}
 		m.sessions[beanID] = session
@@ -323,12 +320,12 @@ func (m *Manager) SetYoloMode(beanID string, yoloMode bool) error {
 		return nil
 	}
 
-	if session.YoloMode == yoloMode {
+	if session.ActMode == actMode {
 		m.mu.Unlock()
 		return nil
 	}
 
-	session.YoloMode = yoloMode
+	session.ActMode = actMode
 
 	proc, hasProc := m.processes[beanID]
 	if hasProc {
@@ -343,72 +340,6 @@ func (m *Manager) SetYoloMode(beanID string, yoloMode bool) error {
 
 	m.notify(beanID)
 	return nil
-}
-
-// ResolvePermission handles the user's response to a permission denial.
-// If allow is true, the denied tool patterns are added to AllowedTools,
-// the process is killed (so it respawns with --allowedTools), and a
-// continuation message is sent. If deny, the interaction is simply cleared.
-func (m *Manager) ResolvePermission(beanID string, allow bool) error {
-	m.mu.Lock()
-	s, ok := m.sessions[beanID]
-	if !ok {
-		m.mu.Unlock()
-		return fmt.Errorf("no session for bean %s", beanID)
-	}
-	pending := s.PendingInteraction
-	if pending == nil || pending.Type != InteractionPermission {
-		m.mu.Unlock()
-		return fmt.Errorf("no pending permission request for bean %s", beanID)
-	}
-
-	if allow {
-		// Add denied tool names to the allowed list for future spawns
-		for _, d := range pending.PermissionDenials {
-			s.AllowedTools = appendUnique(s.AllowedTools, d.ToolName)
-		}
-	}
-
-	s.PendingInteraction = nil
-
-	// Kill the running process so it respawns with updated --allowedTools
-	proc, hasProc := m.processes[beanID]
-	if hasProc {
-		delete(m.processes, beanID)
-		s.Status = StatusIdle
-	}
-	m.mu.Unlock()
-
-	if hasProc && proc != nil {
-		proc.kill()
-	}
-
-	m.notify(beanID)
-
-	if allow {
-		// Build a clear approval message so the resumed agent knows the tools were approved
-		toolNames := make([]string, len(pending.PermissionDenials))
-		for i, d := range pending.PermissionDenials {
-			toolNames[i] = d.ToolName
-		}
-		msg := fmt.Sprintf("The user has approved the use of the following tools: %s. Please retry your previous action.", strings.Join(toolNames, ", "))
-
-		go func() {
-			_ = m.SendMessage(beanID, s.WorkDir, msg)
-		}()
-	}
-
-	return nil
-}
-
-// appendUnique adds a string to a slice if not already present.
-func appendUnique(slice []string, val string) []string {
-	for _, s := range slice {
-		if s == val {
-			return slice
-		}
-	}
-	return append(slice, val)
 }
 
 // ClearSession stops any running process, removes the session from memory,
@@ -455,18 +386,15 @@ func (m *Manager) Shutdown() {
 	}
 }
 
-// applyDefaultMode sets YoloMode and PlanMode on a session based on the manager's default.
+// applyDefaultMode sets ActMode and PlanMode on a session based on the manager's default.
 func (m *Manager) applyDefaultMode(s *Session) {
 	switch m.defaultPermissionMode {
 	case DefaultModePlan:
 		s.PlanMode = true
-		s.YoloMode = false
-	case DefaultModeAct:
+		s.ActMode = false
+	default: // act
 		s.PlanMode = false
-		s.YoloMode = false
-	default: // yolo
-		s.PlanMode = false
-		s.YoloMode = true
+		s.ActMode = true
 	}
 }
 

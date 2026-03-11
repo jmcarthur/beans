@@ -598,12 +598,12 @@ func (r *mutationResolver) SetAgentPlanMode(ctx context.Context, beanID string, 
 	return true, nil
 }
 
-// SetAgentYoloMode is the resolver for the setAgentYoloMode field.
-func (r *mutationResolver) SetAgentYoloMode(ctx context.Context, beanID string, yoloMode bool) (bool, error) {
+// SetAgentActMode is the resolver for the setAgentActMode field.
+func (r *mutationResolver) SetAgentActMode(ctx context.Context, beanID string, actMode bool) (bool, error) {
 	if r.AgentMgr == nil {
 		return false, fmt.Errorf("agent manager not available")
 	}
-	if err := r.AgentMgr.SetYoloMode(beanID, yoloMode); err != nil {
+	if err := r.AgentMgr.SetActMode(beanID, actMode); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -615,17 +615,6 @@ func (r *mutationResolver) ClearAgentSession(ctx context.Context, beanID string)
 		return false, fmt.Errorf("agent manager not available")
 	}
 	if err := r.AgentMgr.ClearSession(beanID); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-// ResolvePermission is the resolver for the resolvePermission field.
-func (r *mutationResolver) ResolvePermission(ctx context.Context, beanID string, allow bool, always *bool) (bool, error) {
-	if r.AgentMgr == nil {
-		return false, fmt.Errorf("agent manager not available")
-	}
-	if err := r.AgentMgr.ResolvePermission(beanID, allow); err != nil {
 		return false, err
 	}
 	return true, nil

@@ -7,13 +7,11 @@ export interface AgentMessage {
   content: string;
 }
 
-export type InteractionType = 'EXIT_PLAN' | 'ENTER_PLAN' | 'ASK_USER' | 'PERMISSION_REQUEST';
+export type InteractionType = 'EXIT_PLAN' | 'ENTER_PLAN' | 'ASK_USER';
 
 export interface PendingInteraction {
   type: InteractionType;
   planContent: string | null;
-  toolName: string | null;
-  toolInput: string | null;
 }
 
 export interface AgentSession {
@@ -23,7 +21,7 @@ export interface AgentSession {
   messages: AgentMessage[];
   error: string | null;
   planMode: boolean;
-  yoloMode: boolean;
+  actMode: boolean;
   systemStatus: string | null;
   pendingInteraction: PendingInteraction | null;
   workDir: string | null;
@@ -41,13 +39,11 @@ const AGENT_SESSION_SUBSCRIPTION = gql`
       }
       error
       planMode
-      yoloMode
+      actMode
       systemStatus
       pendingInteraction {
         type
         planContent
-        toolName
-        toolInput
       }
       workDir
     }
@@ -72,21 +68,15 @@ const SET_AGENT_PLAN_MODE = gql`
   }
 `;
 
-const SET_AGENT_YOLO_MODE = gql`
-  mutation SetAgentYoloMode($beanId: ID!, $yoloMode: Boolean!) {
-    setAgentYoloMode(beanId: $beanId, yoloMode: $yoloMode)
+const SET_AGENT_ACT_MODE = gql`
+  mutation SetAgentActMode($beanId: ID!, $actMode: Boolean!) {
+    setAgentActMode(beanId: $beanId, actMode: $actMode)
   }
 `;
 
 const CLEAR_AGENT_SESSION = gql`
   mutation ClearAgentSession($beanId: ID!) {
     clearAgentSession(beanId: $beanId)
-  }
-`;
-
-const RESOLVE_PERMISSION = gql`
-  mutation ResolvePermission($beanId: ID!, $allow: Boolean!, $always: Boolean) {
-    resolvePermission(beanId: $beanId, allow: $allow, always: $always)
   }
 `;
 
@@ -199,21 +189,8 @@ export class AgentChatStore {
     return true;
   }
 
-  async setYoloMode(beanId: string, yoloMode: boolean): Promise<boolean> {
-    const result = await client.mutation(SET_AGENT_YOLO_MODE, { beanId, yoloMode }).toPromise();
-
-    if (result.error) {
-      this.error = result.error.message;
-      return false;
-    }
-
-    return true;
-  }
-
-  async resolvePermission(beanId: string, allow: boolean, always?: boolean): Promise<boolean> {
-    const result = await client
-      .mutation(RESOLVE_PERMISSION, { beanId, allow, always: always ?? null })
-      .toPromise();
+  async setActMode(beanId: string, actMode: boolean): Promise<boolean> {
+    const result = await client.mutation(SET_AGENT_ACT_MODE, { beanId, actMode }).toPromise();
 
     if (result.error) {
       this.error = result.error.message;

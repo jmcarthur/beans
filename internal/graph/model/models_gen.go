@@ -41,8 +41,8 @@ type AgentSession struct {
 	Error *string `json:"error,omitempty"`
 	// Whether the agent is in plan mode (read-only)
 	PlanMode bool `json:"planMode"`
-	// Whether the agent is in YOLO mode (fully autonomous, no permission prompts)
-	YoloMode bool `json:"yoloMode"`
+	// Whether the agent is in act mode (fully autonomous, no permission prompts)
+	ActMode bool `json:"actMode"`
 	// Transient system status (e.g. 'compacting'), null when idle
 	SystemStatus *string `json:"systemStatus,omitempty"`
 	// Pending blocking interaction awaiting user response
@@ -180,10 +180,6 @@ type PendingInteraction struct {
 	Type InteractionType `json:"type"`
 	// Plan file content (for EXIT_PLAN only)
 	PlanContent *string `json:"planContent,omitempty"`
-	// Tool name requesting permission (for PERMISSION_REQUEST only)
-	ToolName *string `json:"toolName,omitempty"`
-	// Tool input as JSON string (for PERMISSION_REQUEST only)
-	ToolInput *string `json:"toolInput,omitempty"`
 }
 
 type Query struct {
@@ -432,22 +428,20 @@ func (e ChangeType) MarshalJSON() ([]byte, error) {
 type InteractionType string
 
 const (
-	InteractionTypeExitPlan          InteractionType = "EXIT_PLAN"
-	InteractionTypeEnterPlan         InteractionType = "ENTER_PLAN"
-	InteractionTypeAskUser           InteractionType = "ASK_USER"
-	InteractionTypePermissionRequest InteractionType = "PERMISSION_REQUEST"
+	InteractionTypeExitPlan  InteractionType = "EXIT_PLAN"
+	InteractionTypeEnterPlan InteractionType = "ENTER_PLAN"
+	InteractionTypeAskUser   InteractionType = "ASK_USER"
 )
 
 var AllInteractionType = []InteractionType{
 	InteractionTypeExitPlan,
 	InteractionTypeEnterPlan,
 	InteractionTypeAskUser,
-	InteractionTypePermissionRequest,
 }
 
 func (e InteractionType) IsValid() bool {
 	switch e {
-	case InteractionTypeExitPlan, InteractionTypeEnterPlan, InteractionTypeAskUser, InteractionTypePermissionRequest:
+	case InteractionTypeExitPlan, InteractionTypeEnterPlan, InteractionTypeAskUser:
 		return true
 	}
 	return false

@@ -870,11 +870,11 @@ func TestGetDefaultPermissionMode(t *testing.T) {
 		mode     PermissionMode
 		expected PermissionMode
 	}{
-		{"empty defaults to yolo", "", PermissionModeYolo},
-		{"yolo", PermissionModeYolo, PermissionModeYolo},
+		{"empty defaults to act", "", PermissionModeAct},
 		{"act", PermissionModeAct, PermissionModeAct},
 		{"plan", PermissionModePlan, PermissionModePlan},
-		{"invalid defaults to yolo", PermissionMode("invalid"), PermissionModeYolo},
+		{"invalid defaults to act", PermissionMode("invalid"), PermissionModeAct},
+		{"yolo is backwards-compat alias for act", PermissionMode("yolo"), PermissionModeAct},
 	}
 
 	for _, tt := range tests {
@@ -894,12 +894,12 @@ func TestIsValidPermissionMode(t *testing.T) {
 		mode string
 		want bool
 	}{
-		{"yolo", true},
 		{"act", true},
+		{"yolo", true},
 		{"plan", true},
 		{"", false},
 		{"invalid", false},
-		{"YOLO", false},
+		{"ACT", false},
 	}
 
 	for _, tt := range tests {
@@ -939,7 +939,7 @@ func TestSaveIncludesAgentSection(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	cfg := DefaultWithPrefix("test-")
-	cfg.Agent.DefaultPermissionMode = PermissionModeAct
+	cfg.Agent.DefaultPermissionMode = PermissionModePlan
 	cfg.SetConfigDir(tmpDir)
 
 	if err := cfg.Save(tmpDir); err != nil {
@@ -955,8 +955,8 @@ func TestSaveIncludesAgentSection(t *testing.T) {
 	if !strings.Contains(content, "agent:") {
 		t.Error("expected agent section in saved config")
 	}
-	if !strings.Contains(content, "default_permission_mode: act") {
-		t.Error("expected default_permission_mode: act in saved config")
+	if !strings.Contains(content, "default_permission_mode: plan") {
+		t.Error("expected default_permission_mode: plan in saved config")
 	}
 }
 
@@ -1000,8 +1000,8 @@ func TestDefaultIncludesAgentSection(t *testing.T) {
 	if !strings.Contains(content, "agent:") {
 		t.Error("expected default config to include agent section")
 	}
-	if !strings.Contains(content, "default_permission_mode: yolo") {
-		t.Error("expected default config to include default_permission_mode: yolo")
+	if !strings.Contains(content, "default_permission_mode: act") {
+		t.Error("expected default config to include default_permission_mode: act")
 	}
 }
 

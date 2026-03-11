@@ -35,14 +35,11 @@
   const sessionError = $derived(store.session?.error ?? null);
   const systemStatus = $derived(store.session?.systemStatus ?? null);
   const planMode = $derived(store.session?.planMode ?? false);
-  const yoloMode = $derived(store.session?.yoloMode ?? false);
-  const agentMode = $derived<'plan' | 'act' | 'yolo'>(
-    planMode ? 'plan' : yoloMode ? 'yolo' : 'act'
-  );
+  const agentMode = $derived<'plan' | 'act'>(planMode ? 'plan' : 'act');
 
-  function setAgentMode(mode: 'plan' | 'act' | 'yolo') {
+  function setAgentMode(mode: 'plan' | 'act') {
     store.setPlanMode(beanId, mode === 'plan');
-    store.setYoloMode(beanId, mode === 'yolo');
+    store.setActMode(beanId, mode === 'act');
   }
   const activityLabel = $derived(systemStatus ? `${systemStatus}...` : 'thinking...');
   const pendingInteraction = $derived(store.session?.pendingInteraction ?? null);
@@ -65,9 +62,9 @@
     store.sendMessage(beanId, 'yes, proceed');
   }
 
-  function approveInteractionWithYolo() {
+  function approveInteractionWithAct() {
     if (!pendingInteraction) return;
-    store.setYoloMode(beanId, true);
+    store.setActMode(beanId, true);
     store.sendMessage(beanId, 'yes, proceed');
   }
 
@@ -79,82 +76,6 @@
     } else {
       // Rejected entering plan → go back to work mode
       store.setPlanMode(beanId, false);
-    }
-  }
-
-  function allowPermission() {
-    store.resolvePermission(beanId, true);
-  }
-
-  function alwaysAllowPermission() {
-    store.resolvePermission(beanId, true, true);
-  }
-
-  function denyPermission() {
-    store.resolvePermission(beanId, false);
-  }
-
-  function stripWorkDir(filePath: string): string {
-    const wd = store.session?.workDir;
-    if (wd && filePath.startsWith(wd + '/')) {
-      return filePath.slice(wd.length + 1);
-    }
-    return filePath;
-  }
-
-  function formatToolInput(toolName: string | null, toolInput: string | null): string {
-    if (!toolInput) return '';
-    try {
-      const input = JSON.parse(toolInput);
-      switch (toolName) {
-        case 'Bash':
-          return input.command ?? '';
-        case 'Write':
-        case 'Read':
-          return input.file_path ? stripWorkDir(input.file_path) : '';
-        case 'Edit':
-          return input.file_path
-            ? `${stripWorkDir(input.file_path)}\n${input.old_string ?? ''} → ${input.new_string ?? ''}`
-            : '';
-        case 'Grep':
-          return input.pattern
-            ? `/${input.pattern}/ ${input.path ? stripWorkDir(input.path) : ''}`.trim()
-            : '';
-        case 'Glob':
-          return input.pattern ?? '';
-        case 'ToolSearch':
-        case 'WebSearch':
-          return input.query ?? '';
-        case 'WebFetch':
-          return input.url ?? '';
-        case 'Agent':
-          return input.description ?? '';
-        case 'Skill':
-          return input.args ? `${input.skill} ${input.args}` : (input.skill ?? '');
-        case 'EnterWorktree':
-          return input.description ?? '';
-        case 'ExitWorktree':
-          return '';
-        default: {
-          const summaryFields = [
-            'description',
-            'file_path',
-            'pattern',
-            'command',
-            'query',
-            'skill',
-            'prompt'
-          ];
-          for (const field of summaryFields) {
-            if (input[field] && typeof input[field] === 'string') {
-              return field === 'file_path' ? stripWorkDir(input[field]) : input[field];
-            }
-          }
-          return '';
-        }
-      }
-    } catch {
-      return toolInput;
     }
   }
 
@@ -306,8 +227,8 @@
     </div>
   {/if}
 
-  <!-- Pending interaction approval -->
-  {#if pendingInteraction && pendingInteraction.type !== 'ASK_USER' && pendingInteraction.type !== 'PERMISSION_REQUEST'}
+  <!-- Pending interaction approval (plan mode transitions) -->
+  {#if pendingInteraction && pendingInteraction.type !== 'ASK_USER'}
     <div
       class={[
         'border-t p-3',
@@ -346,10 +267,10 @@
         </button>
         {#if pendingInteraction.type === 'EXIT_PLAN'}
           <button
-            onclick={approveInteractionWithYolo}
+            onclick={approveInteractionWithAct}
             class="cursor-pointer rounded bg-danger px-3 py-1 font-mono text-xs text-white transition-colors hover:opacity-90"
           >
-            Approve with YOLO
+            Approve + Act
           </button>
         {/if}
         <button
@@ -357,44 +278,6 @@
           class="cursor-pointer rounded border border-border px-3 py-1 font-mono text-xs text-text-muted transition-colors hover:bg-surface-alt"
         >
           Reject
-        </button>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Permission request approval -->
-  {#if pendingInteraction?.type === 'PERMISSION_REQUEST'}
-    <div class="border-t border-warning/30 bg-warning/5 p-3">
-      <p class="mb-1 font-mono text-xs font-bold text-warning">
-        Permission Request: {pendingInteraction.toolName ?? 'Unknown Tool'}
-      </p>
-
-      {#if formatToolInput(pendingInteraction.toolName, pendingInteraction.toolInput)}
-        <pre
-          class="mb-3 max-h-32 overflow-y-auto rounded border border-border bg-surface p-2 text-xs break-all whitespace-pre-wrap text-text-muted">{formatToolInput(
-            pendingInteraction.toolName,
-            pendingInteraction.toolInput
-          )}</pre>
-      {/if}
-
-      <div class="flex gap-2">
-        <button
-          onclick={allowPermission}
-          class="cursor-pointer rounded bg-status-in-progress-text px-3 py-1 font-mono text-xs text-white transition-colors hover:opacity-90"
-        >
-          Allow
-        </button>
-        <button
-          onclick={alwaysAllowPermission}
-          class="cursor-pointer rounded bg-accent px-3 py-1 font-mono text-xs text-accent-text transition-colors hover:opacity-90"
-        >
-          Always Allow
-        </button>
-        <button
-          onclick={denyPermission}
-          class="cursor-pointer rounded border border-border px-3 py-1 font-mono text-xs text-text-muted transition-colors hover:bg-surface-alt"
-        >
-          Deny
         </button>
       </div>
     </div>
@@ -473,27 +356,14 @@
           onclick={() => setAgentMode('act')}
           disabled={isRunning}
           class={[
-            'btn-tab-sm border-l-0',
+            'btn-tab-sm rounded-r border-l-0',
             agentMode === 'act'
-              ? 'border-status-in-progress-text/30 bg-status-in-progress-bg text-status-in-progress-text'
+              ? 'border-danger/30 bg-danger/10 text-danger'
               : 'btn-tab-sm-inactive'
           ]}
         >
           <span class="icon-[uil--play] size-3"></span>
           Act
-        </button>
-        <button
-          onclick={() => setAgentMode('yolo')}
-          disabled={isRunning}
-          class={[
-            'btn-tab-sm rounded-r border-l-0',
-            agentMode === 'yolo'
-              ? 'border-danger/30 bg-danger/10 text-danger'
-              : 'btn-tab-sm-inactive'
-          ]}
-        >
-          <span class="icon-[uil--bolt] size-3"></span>
-          YOLO
         </button>
       </div>
 

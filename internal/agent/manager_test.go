@@ -1,9 +1,7 @@
 package agent
 
 import (
-	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewManager(t *testing.T) {
@@ -594,37 +592,27 @@ func TestBuildClaudeArgs_PlanMode(t *testing.T) {
 }
 
 func TestBuildClaudeArgs_NoPlanMode(t *testing.T) {
-	// When not in plan mode, should use acceptEdits (not plan)
+	// When not in plan mode (and not act), should still use plan mode (the only non-act option)
 	args := buildClaudeArgs(&Session{PlanMode: false})
+	found := false
 	for i, a := range args {
 		if a == "--permission-mode" && i+1 < len(args) && args[i+1] == "plan" {
-			t.Errorf("unexpected --permission-mode plan in non-plan args: %v", args)
+			found = true
 		}
+	}
+	if !found {
+		t.Errorf("expected --permission-mode plan in non-act args, got %v", args)
 	}
 }
 
-func TestLoadOrCreateSession_DefaultsToYoloMode(t *testing.T) {
+func TestLoadOrCreateSession_DefaultsToActMode(t *testing.T) {
 	m := NewManager("", nil)
 	m.mu.Lock()
 	s := m.loadOrCreateSession("test", "/tmp/test")
 	m.mu.Unlock()
 
-	if !s.YoloMode {
-		t.Error("expected new sessions to default to YoloMode=true")
-	}
-}
-
-func TestNewManager_ActMode(t *testing.T) {
-	m := NewManager("", nil, DefaultModeAct)
-	m.mu.Lock()
-	s := m.loadOrCreateSession("test", "/tmp/test")
-	m.mu.Unlock()
-
-	if s.YoloMode {
-		t.Error("expected YoloMode=false in act mode")
-	}
-	if s.PlanMode {
-		t.Error("expected PlanMode=false in act mode")
+	if !s.ActMode {
+		t.Error("expected new sessions to default to ActMode=true")
 	}
 }
 
@@ -634,32 +622,32 @@ func TestNewManager_PlanMode(t *testing.T) {
 	s := m.loadOrCreateSession("test", "/tmp/test")
 	m.mu.Unlock()
 
-	if s.YoloMode {
-		t.Error("expected YoloMode=false in plan mode")
+	if s.ActMode {
+		t.Error("expected ActMode=false in plan mode")
 	}
 	if !s.PlanMode {
 		t.Error("expected PlanMode=true in plan mode")
 	}
 }
 
-func TestNewManager_ExplicitYoloMode(t *testing.T) {
-	m := NewManager("", nil, DefaultModeYolo)
+func TestNewManager_ExplicitActMode(t *testing.T) {
+	m := NewManager("", nil, DefaultModeAct)
 	m.mu.Lock()
 	s := m.loadOrCreateSession("test", "/tmp/test")
 	m.mu.Unlock()
 
-	if !s.YoloMode {
-		t.Error("expected YoloMode=true")
+	if !s.ActMode {
+		t.Error("expected ActMode=true")
 	}
 	if s.PlanMode {
 		t.Error("expected PlanMode=false")
 	}
 }
 
-func TestSetYoloMode_CreatesSession(t *testing.T) {
+func TestSetActMode_CreatesSession(t *testing.T) {
 	m := NewManager("", nil)
 
-	err := m.SetYoloMode("test", true)
+	err := m.SetActMode("test", true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -668,38 +656,38 @@ func TestSetYoloMode_CreatesSession(t *testing.T) {
 	if s == nil {
 		t.Fatal("expected session to be created")
 	}
-	if !s.YoloMode {
-		t.Error("expected YoloMode to be true")
+	if !s.ActMode {
+		t.Error("expected ActMode to be true")
 	}
 	if s.Status != StatusIdle {
 		t.Errorf("status = %q, want %q", s.Status, StatusIdle)
 	}
 }
 
-func TestSetYoloMode_TogglesExisting(t *testing.T) {
+func TestSetActMode_TogglesExisting(t *testing.T) {
 	m := NewManager("", nil)
 	m.sessions["test"] = &Session{
 		ID:        "test",
 		Status:    StatusIdle,
-		YoloMode:  true,
+		ActMode:  true,
 		SessionID: "sess-123",
 	}
 
-	err := m.SetYoloMode("test", false)
+	err := m.SetActMode("test", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	s := m.sessions["test"]
-	if s.YoloMode {
-		t.Error("expected YoloMode to be false")
+	if s.ActMode {
+		t.Error("expected ActMode to be false")
 	}
 	if s.SessionID != "sess-123" {
 		t.Errorf("expected SessionID to be preserved, got %q", s.SessionID)
 	}
 }
 
-func TestSetYoloMode_NoopWhenSame(t *testing.T) {
+func TestSetActMode_NoopWhenSame(t *testing.T) {
 	m := NewManager("", nil)
 	ch := m.Subscribe("test")
 	defer m.Unsubscribe("test", ch)
@@ -707,7 +695,7 @@ func TestSetYoloMode_NoopWhenSame(t *testing.T) {
 	m.sessions["test"] = &Session{
 		ID:       "test",
 		Status:   StatusIdle,
-		YoloMode: true,
+		ActMode: true,
 	}
 
 	// Drain any existing notification
@@ -716,7 +704,7 @@ func TestSetYoloMode_NoopWhenSame(t *testing.T) {
 	default:
 	}
 
-	err := m.SetYoloMode("test", true)
+	err := m.SetActMode("test", true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -729,22 +717,22 @@ func TestSetYoloMode_NoopWhenSame(t *testing.T) {
 	}
 }
 
-func TestSetYoloMode_IncludedInSnapshot(t *testing.T) {
+func TestSetActMode_IncludedInSnapshot(t *testing.T) {
 	m := NewManager("", nil)
 	m.sessions["test"] = &Session{
 		ID:       "test",
 		Status:   StatusIdle,
-		YoloMode: true,
+		ActMode: true,
 	}
 
 	snap := m.GetSession("test")
-	if !snap.YoloMode {
-		t.Error("expected YoloMode=true in snapshot")
+	if !snap.ActMode {
+		t.Error("expected ActMode=true in snapshot")
 	}
 }
 
-func TestBuildClaudeArgs_YoloMode(t *testing.T) {
-	args := buildClaudeArgs(&Session{YoloMode: true})
+func TestBuildClaudeArgs_ActMode(t *testing.T) {
+	args := buildClaudeArgs(&Session{ActMode: true})
 	found := false
 	for _, a := range args {
 		if a == "--dangerously-skip-permissions" {
@@ -757,221 +745,24 @@ func TestBuildClaudeArgs_YoloMode(t *testing.T) {
 	}
 }
 
-func TestBuildClaudeArgs_YoloOverridesPlan(t *testing.T) {
-	// When both are set, YOLO takes precedence (no plan mode flag)
-	args := buildClaudeArgs(&Session{YoloMode: true, PlanMode: true})
-	foundYolo := false
+func TestBuildClaudeArgs_ActOverridesPlan(t *testing.T) {
+	// When both are set, Act takes precedence (no plan mode flag)
+	args := buildClaudeArgs(&Session{ActMode: true, PlanMode: true})
+	foundAct := false
 	foundPlan := false
 	for _, a := range args {
 		if a == "--dangerously-skip-permissions" {
-			foundYolo = true
+			foundAct = true
 		}
 		if a == "--permission-mode" {
 			foundPlan = true
 		}
 	}
-	if !foundYolo {
+	if !foundAct {
 		t.Error("expected --dangerously-skip-permissions in args")
 	}
 	if foundPlan {
-		t.Error("unexpected --permission-mode when YoloMode is set")
-	}
-}
-
-func TestResolvePermission_Allow(t *testing.T) {
-	m := NewManager("", nil)
-	ch := m.Subscribe("test")
-	defer m.Unsubscribe("test", ch)
-
-	m.sessions["test"] = &Session{
-		ID:      "test",
-		Status:  StatusRunning,
-		WorkDir: "/tmp/test",
-		PendingInteraction: &PendingInteraction{
-			Type: InteractionPermission,
-			PermissionDenials: []PermissionDenial{
-				{ToolName: "Write", ToolInput: map[string]any{"file_path": "/tmp/test.txt"}},
-			},
-		},
-	}
-
-	// Drain any notification
-	select {
-	case <-ch:
-	default:
-	}
-
-	err := m.ResolvePermission("test", true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// PendingInteraction should be cleared
-	s := m.sessions["test"]
-	if s.PendingInteraction != nil {
-		t.Error("expected PendingInteraction to be cleared")
-	}
-
-	// AllowedTools should contain the denied tool
-	found := false
-	for _, tool := range s.AllowedTools {
-		if tool == "Write" {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("expected Write in AllowedTools, got %v", s.AllowedTools)
-	}
-
-	// Should have notified
-	select {
-	case <-ch:
-	default:
-		t.Error("expected notification")
-	}
-}
-
-func TestResolvePermission_AllowMessageIncludesToolNames(t *testing.T) {
-	m := NewManager("", nil)
-
-	m.sessions["test"] = &Session{
-		ID:      "test",
-		Status:  StatusIdle,
-		WorkDir: "/tmp/test",
-		PendingInteraction: &PendingInteraction{
-			Type: InteractionPermission,
-			PermissionDenials: []PermissionDenial{
-				{ToolName: "Bash"},
-				{ToolName: "Write"},
-			},
-		},
-	}
-
-	err := m.ResolvePermission("test", true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Wait briefly for the goroutine to send the message
-	time.Sleep(50 * time.Millisecond)
-
-	s := m.sessions["test"]
-
-	// Find the user message that was sent as continuation
-	var lastUserMsg string
-	for _, msg := range s.Messages {
-		if msg.Role == RoleUser {
-			lastUserMsg = msg.Content
-		}
-	}
-
-	if lastUserMsg == "" {
-		t.Fatal("expected a user message to be sent after permission approval")
-	}
-	if !strings.Contains(lastUserMsg, "Bash") {
-		t.Errorf("expected continuation message to mention 'Bash', got: %s", lastUserMsg)
-	}
-	if !strings.Contains(lastUserMsg, "Write") {
-		t.Errorf("expected continuation message to mention 'Write', got: %s", lastUserMsg)
-	}
-	if !strings.Contains(lastUserMsg, "approved") {
-		t.Errorf("expected continuation message to mention 'approved', got: %s", lastUserMsg)
-	}
-}
-
-func TestResolvePermission_Deny(t *testing.T) {
-	m := NewManager("", nil)
-
-	m.sessions["test"] = &Session{
-		ID:     "test",
-		Status: StatusRunning,
-		PendingInteraction: &PendingInteraction{
-			Type: InteractionPermission,
-			PermissionDenials: []PermissionDenial{
-				{ToolName: "Bash"},
-			},
-		},
-	}
-
-	err := m.ResolvePermission("test", false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	s := m.sessions["test"]
-	if s.PendingInteraction != nil {
-		t.Error("expected PendingInteraction to be cleared")
-	}
-	// AllowedTools should NOT contain the denied tool
-	if len(s.AllowedTools) > 0 {
-		t.Errorf("expected empty AllowedTools on deny, got %v", s.AllowedTools)
-	}
-}
-
-func TestResolvePermission_NoSession(t *testing.T) {
-	m := NewManager("", nil)
-	err := m.ResolvePermission("nonexistent", true)
-	if err == nil {
-		t.Error("expected error for nonexistent session")
-	}
-}
-
-func TestResolvePermission_NoPending(t *testing.T) {
-	m := NewManager("", nil)
-	m.sessions["test"] = &Session{
-		ID:     "test",
-		Status: StatusIdle,
-	}
-	err := m.ResolvePermission("test", true)
-	if err == nil {
-		t.Error("expected error when no pending permission")
-	}
-}
-
-func TestBuildClaudeArgs_ActMode(t *testing.T) {
-	// Act mode: not plan, not yolo — should use acceptEdits and allow beans CLI
-	args := buildClaudeArgs(&Session{ID: "bean-123"})
-	for _, a := range args {
-		if a == "--dangerously-skip-permissions" {
-			t.Errorf("unexpected --dangerously-skip-permissions in act mode")
-		}
-	}
-	// Should have --permission-mode acceptEdits
-	foundAcceptEdits := false
-	for i, a := range args {
-		if a == "--permission-mode" && i+1 < len(args) && args[i+1] == "acceptEdits" {
-			foundAcceptEdits = true
-		}
-	}
-	if !foundAcceptEdits {
-		t.Errorf("expected --permission-mode acceptEdits in act mode, got %v", args)
-	}
-	// Should have --allowedTools Bash(beans:*)
-	foundBeans := false
-	for i, a := range args {
-		if a == "--allowedTools" && i+1 < len(args) && args[i+1] == "Bash(beans:*)" {
-			foundBeans = true
-		}
-	}
-	if !foundBeans {
-		t.Errorf("expected --allowedTools Bash(beans:*) in act mode, got %v", args)
-	}
-}
-
-func TestBuildClaudeArgs_AllowedTools(t *testing.T) {
-	args := buildClaudeArgs(&Session{
-		ID:           "bean-123",
-		AllowedTools: []string{"Read", "Bash"},
-	})
-	// Should have --allowedTools for each user tool + the default Bash(beans:*)
-	count := 0
-	for i, a := range args {
-		if a == "--allowedTools" && i+1 < len(args) {
-			count++
-		}
-	}
-	if count != 3 {
-		t.Errorf("expected 3 --allowedTools flags (1 default + 2 user), got %d in %v", count, args)
+		t.Error("unexpected --permission-mode when ActMode is set")
 	}
 }
 
