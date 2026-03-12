@@ -158,19 +158,7 @@ type Mutation {
   removeBlockedBy(id: ID!, targetId: ID!, ifMatch: String): Bean!
 
   """
-  Start work on a bean: creates a git worktree and sets status to in-progress.
-  Returns an error if the bean already has a worktree.
-  """
-  startWork(beanId: ID!): Worktree!
-
-  """
-  Stop work on a bean: removes the git worktree.
-  """
-  stopWork(beanId: ID!): Boolean!
-
-  """
-  Create a standalone worktree not associated with any bean.
-  Returns the created worktree with a generated ID.
+  Create a new worktree. Returns the created worktree with a generated ID.
   """
   createWorktree(name: String!): Worktree!
 
@@ -458,11 +446,9 @@ input BeanFilter {
 A git worktree, either associated with a bean or standalone
 """
 type Worktree {
-  "The bean ID this worktree is for (also serves as worktree identifier for standalone worktrees)"
-  beanId: ID!
-  "The associated bean (null for standalone worktrees)"
-  bean: Bean
-  "Human-readable name (set for standalone worktrees, null for bean-attached)"
+  "Unique worktree identifier"
+  id: ID!
+  "Human-readable name"
   name: String
   "Git branch name"
   branch: String!

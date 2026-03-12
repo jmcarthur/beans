@@ -166,7 +166,7 @@ func (r *Resolver) removeBlockedByRelationships(b *bean.Bean, targetIDs []string
 // worktreeToModel converts an internal worktree to a GraphQL model.
 func worktreeToModel(wt *worktree.Worktree) *model.Worktree {
 	m := &model.Worktree{
-		BeanID: wt.BeanID,
+		ID:     wt.ID,
 		Branch: wt.Branch,
 		Path:   wt.Path,
 	}

@@ -143,12 +143,9 @@ func activeAgentsToModel(agents []agent.ActiveAgent) []*model.ActiveAgentStatus 
 	return result
 }
 
-// actionContext provides context about the bean for action visibility filtering
-// and prompt generation.
+// actionContext provides context for action visibility filtering and prompt generation.
 type actionContext struct {
-	BeanID        string
-	BeanStatus    string
-	InWorktree    bool
+	WorktreeID    string
 	WorkDir       string // working directory (worktree path or project root)
 	HasChanges    bool   // uncommitted changes or untracked files
 	HasNewCommits bool   // commits ahead of the base branch
@@ -168,17 +165,6 @@ type agentActionDef struct {
 // agentActions is the single registry of all available agent actions.
 var agentActions = []agentActionDef{
 	{
-		ID:          "start-work",
-		Label:       "Start Work",
-		Description: "Mark the bean as in-progress and start implementing it",
-		PromptFunc: func(ctx actionContext) string {
-			return fmt.Sprintf("Mark the bean %s as in-progress and start implementing it.", ctx.BeanID)
-		},
-		Visible: func(ctx actionContext) bool {
-			return ctx.InWorktree && ctx.BeanStatus != "in-progress"
-		},
-	},
-	{
 		ID:          "commit",
 		Label:       "Commit",
 		Description: "Create a git commit",
@@ -195,11 +181,11 @@ var agentActions = []agentActionDef{
 	{
 		ID:          "integrate",
 		Label:       "Integrate",
-		Description: "Commit, complete the bean, and rebase onto main",
-		PromptFunc: func(ctx actionContext) string {
-			return fmt.Sprintf(`Integrate this worktree's work into main. Follow these steps in order:
+		Description: "Commit, complete any associated beans, and rebase onto main",
+		PromptFunc: func(_ actionContext) string {
+			return `Integrate this worktree's work into main. Follow these steps in order:
 
-1. Mark bean %s as completed (update its status).
+1. If there are associated beans, mark them as completed.
 2. If there are uncommitted changes, create a commit (following the usual commit guidelines).
 3. Rebase onto main and fast-forward push — do NOT merge. Do NOT switch to or modify main's working directory (another agent may be working there). Do this from the worktree:
    - Ensure the main repo accepts pushes to checked-out branches: git -C "$(git rev-parse --git-common-dir)/.." config receive.denyCurrentBranch updateInstead
@@ -207,10 +193,10 @@ var agentActions = []agentActionDef{
    - Resolve any rebase conflicts if they arise, then continue with: git rebase --continue
    - Then fast-forward main's branch pointer: git push . HEAD:main
    - This push is fast-forward-only — if another agent integrated first, it will fail safely.
-   - If it fails, rebase again onto main (which now includes the other agent's work) and retry the push.`, ctx.BeanID)
+   - If it fails, rebase again onto main (which now includes the other agent's work) and retry the push.`
 		},
 		Visible: func(ctx actionContext) bool {
-			return ctx.InWorktree && (ctx.HasChanges || ctx.HasNewCommits)
+			return ctx.HasChanges || ctx.HasNewCommits
 		},
 	},
 }
@@ -257,7 +243,7 @@ func (r *Resolver) findWorktreePath(beanID string) (string, error) {
 		return "", fmt.Errorf("list worktrees: %w", err)
 	}
 	for _, wt := range wts {
-		if wt.BeanID == beanID {
+		if wt.ID == beanID {
 			return wt.Path, nil
 		}
 	}

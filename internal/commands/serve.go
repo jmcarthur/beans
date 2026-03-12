@@ -111,7 +111,7 @@ func runServer(port int, origins []string) error {
 	if existingWTs, err := wtManager.List(); err == nil {
 		for _, wt := range existingWTs {
 			if err := core.WatchWorktreeBeans(wt.Path); err != nil {
-				fmt.Printf("[beans] warning: failed to watch worktree %s: %v\n", wt.BeanID, err)
+				fmt.Printf("[beans] warning: failed to watch worktree %s: %v\n", wt.ID, err)
 			}
 		}
 	}

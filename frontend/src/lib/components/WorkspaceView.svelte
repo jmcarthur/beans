@@ -1,22 +1,19 @@
 <script lang="ts">
-  import type { Bean } from '$lib/beans.svelte';
   import { AgentChatStore } from '$lib/agentChat.svelte';
   import { ui } from '$lib/uiState.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { onDestroy } from 'svelte';
   import SplitPane from './SplitPane.svelte';
   import AgentChat from './AgentChat.svelte';
-  import BeanPane from './BeanPane.svelte';
   import ChangesPane from './ChangesPane.svelte';
   import PaneHeader from './PaneHeader.svelte';
   import TerminalPane from './TerminalPane.svelte';
 
   interface Props {
-    bean?: Bean;
     worktreeId: string;
   }
 
-  let { bean, worktreeId }: Props = $props();
+  let { worktreeId }: Props = $props();
 
   const agentStore = new AgentChatStore();
 
@@ -31,7 +28,7 @@
   const agentBusy = $derived(agentStore.session?.status === 'RUNNING');
 
   const worktreePath = $derived(
-    worktreeStore.worktrees.find((wt) => wt.beanId === worktreeId)?.path
+    worktreeStore.worktrees.find((wt) => wt.id === worktreeId)?.path
   );
 </script>
 
@@ -96,27 +93,9 @@
   {/if}
 {/snippet}
 
-{#snippet workspaceContent()}
-  {#if bean}
-    <SplitPane direction="horizontal" side="end" persistKey="workspace-chat-width" initialSize={480}>
-      {#snippet aside()}
-        {@render changesChatSplit()}
-      {/snippet}
-
-      {#snippet children()}
-        <BeanPane {bean} onSelect={(b) => ui.selectBean(b)} onEdit={(b) => ui.openEditForm(b)} />
-      {/snippet}
-    </SplitPane>
-  {:else}
-    <div class="flex h-full">
-      {@render changesChatSplit()}
-    </div>
-  {/if}
-{/snippet}
-
 <SplitPane direction="vertical" side="end" persistKey="workspace-terminal" initialSize={300} collapsed={!ui.showTerminal}>
   {#snippet children()}
-    {@render workspaceContent()}
+    {@render changesChatSplit()}
   {/snippet}
   {#snippet aside()}
     {#if ui.showTerminal}

@@ -13,17 +13,16 @@ import (
 	"sync"
 
 	"github.com/hmans/beans/pkg/bean"
-	"github.com/hmans/beans/pkg/safepath"
 )
 
 const branchPrefix = "beans/"
 
-// Worktree represents a git worktree associated with a bean or standalone.
+// Worktree represents a git worktree.
 type Worktree struct {
-	BeanID string
+	ID     string
 	Branch string
 	Path   string
-	Name   string // Human-readable name (non-empty for standalone worktrees)
+	Name   string // Human-readable name
 }
 
 // Manager handles git worktree operations for a repository.
@@ -97,7 +96,7 @@ func (m *Manager) List() ([]Worktree, error) {
 
 	// Enrich with metadata (name for standalone worktrees)
 	for i := range worktrees {
-		if meta := m.loadMeta(worktrees[i].BeanID); meta != nil {
+		if meta := m.loadMeta(worktrees[i].ID); meta != nil {
 			worktrees[i].Name = meta.Name
 		}
 	}
@@ -115,9 +114,9 @@ func parsePorcelain(output string) []Worktree {
 
 	emit := func() {
 		if !prunable && currentPath != "" && strings.HasPrefix(currentBranch, branchPrefix) {
-			beanID := strings.TrimPrefix(currentBranch, branchPrefix)
+			id := strings.TrimPrefix(currentBranch, branchPrefix)
 			worktrees = append(worktrees, Worktree{
-				BeanID: beanID,
+				ID: id,
 				Branch: currentBranch,
 				Path:   currentPath,
 			})
@@ -152,29 +151,29 @@ func parsePorcelain(output string) []Worktree {
 	return worktrees
 }
 
-// Create creates a new git worktree for the given bean ID.
-// The worktree is placed inside .beans/.worktrees/<beanID>.
-// If the branch beans/<beanID> already exists, it is reused; otherwise a new branch
-// is created from the configured base ref (default: main).
-func (m *Manager) Create(beanID string) (*Worktree, error) {
-	if err := safepath.ValidateBeanID(beanID); err != nil {
-		return nil, fmt.Errorf("invalid bean ID for worktree: %w", err)
+// Create creates a new git worktree with the given name.
+// It generates a unique ID and stores the human-readable name as metadata.
+// The worktree is placed inside .beans/.worktrees/<id>.
+func (m *Manager) Create(name string) (*Worktree, error) {
+	if name == "" {
+		return nil, fmt.Errorf("worktree name must not be empty")
 	}
+
+	// Generate a unique ID with "wt-" prefix
+	id := "wt-" + bean.NewID("", 4)
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	branch := branchPrefix + beanID
-	worktreePath := m.worktreePath(beanID)
+	branch := branchPrefix + id
+	worktreePath := m.worktreePath(id)
 
 	// Check if the worktree path already exists
 	if _, err := os.Stat(worktreePath); err == nil {
-		log.Printf("[worktree] failed to create worktree for %s: path already exists: %s", beanID, worktreePath)
 		return nil, fmt.Errorf("worktree path already exists: %s", worktreePath)
 	}
 
-	// Try creating with a new branch first; if the branch already exists
-	// (e.g. from a previously removed worktree), reuse it.
+	// Create the worktree with a new branch
 	args := []string{"worktree", "add", worktreePath, "-b", branch}
 	if m.baseRef != "" {
 		args = append(args, m.baseRef)
@@ -182,28 +181,23 @@ func (m *Manager) Create(beanID string) (*Worktree, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = m.repoRoot
 	if out, err := cmd.CombinedOutput(); err != nil {
-		if !strings.Contains(string(out), "already exists") {
-			log.Printf("[worktree] failed to create worktree for %s at %s: %s: %v", beanID, worktreePath, strings.TrimSpace(string(out)), err)
-			return nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
-		}
+		log.Printf("[worktree] failed to create worktree %s at %s: %s: %v", id, worktreePath, strings.TrimSpace(string(out)), err)
+		return nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
+	}
 
-		// Branch exists — reuse it
-		log.Printf("[worktree] branch %s already exists, reusing for worktree", branch)
-		cmd = exec.Command("git", "worktree", "add", worktreePath, branch)
-		cmd.Dir = m.repoRoot
-		if out, err := cmd.CombinedOutput(); err != nil {
-			log.Printf("[worktree] failed to create worktree for %s at %s: %s: %v", beanID, worktreePath, strings.TrimSpace(string(out)), err)
-			return nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
-		}
+	// Save the name metadata
+	if err := m.saveMeta(id, &worktreeMeta{Name: name}); err != nil {
+		log.Printf("[worktree] warning: failed to save metadata for %s: %v", id, err)
 	}
 
 	wt := &Worktree{
-		BeanID: beanID,
+		ID:     id,
 		Branch: branch,
 		Path:   worktreePath,
+		Name:   name,
 	}
 
-	log.Printf("[worktree] created worktree for %s (branch=%s, path=%s)", beanID, branch, worktreePath)
+	log.Printf("[worktree] created worktree %s (name=%s, branch=%s, path=%s)", id, name, branch, worktreePath)
 	m.notify()
 	return wt, nil
 }
@@ -245,82 +239,28 @@ func (m *Manager) removeMeta(id string) {
 	os.Remove(m.metaPath(id))
 }
 
-// CreateStandalone creates a new git worktree not associated with any bean.
-// It generates a unique ID and stores the human-readable name as metadata.
-func (m *Manager) CreateStandalone(name string) (*Worktree, error) {
-	if name == "" {
-		return nil, fmt.Errorf("worktree name must not be empty")
-	}
 
-	// Generate a unique ID with "wt-" prefix
-	id := "wt-" + bean.NewID("", 4)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	branch := branchPrefix + id
-	worktreePath := m.worktreePath(id)
-
-	// Check if the worktree path already exists
-	if _, err := os.Stat(worktreePath); err == nil {
-		return nil, fmt.Errorf("worktree path already exists: %s", worktreePath)
-	}
-
-	// Create the worktree with a new branch
-	args := []string{"worktree", "add", worktreePath, "-b", branch}
-	if m.baseRef != "" {
-		args = append(args, m.baseRef)
-	}
-	cmd := exec.Command("git", args...)
-	cmd.Dir = m.repoRoot
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Printf("[worktree] failed to create standalone worktree %s at %s: %s: %v", id, worktreePath, strings.TrimSpace(string(out)), err)
-		return nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
-	}
-
-	// Save the name metadata
-	if err := m.saveMeta(id, &worktreeMeta{Name: name}); err != nil {
-		log.Printf("[worktree] warning: failed to save metadata for %s: %v", id, err)
-	}
-
-	wt := &Worktree{
-		BeanID: id,
-		Branch: branch,
-		Path:   worktreePath,
-		Name:   name,
-	}
-
-	log.Printf("[worktree] created standalone worktree %s (name=%s, branch=%s, path=%s)", id, name, branch, worktreePath)
-	m.notify()
-	return wt, nil
-}
-
-// Remove removes the worktree for the given bean ID.
+// Remove removes the worktree with the given ID.
 // The actual worktree path is looked up from git (not computed), so this works
 // even when the worktree was created from a different repo root/workspace.
 // If the worktree directory is already gone (stale entry), it prunes instead.
-func (m *Manager) Remove(beanID string) error {
-	if err := safepath.ValidateBeanID(beanID); err != nil {
-		return fmt.Errorf("invalid bean ID for worktree removal: %w", err)
-	}
-
+func (m *Manager) Remove(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Look up the actual path from git rather than computing it,
 	// since the worktree may have been created from a different workspace.
-	worktreePath, err := m.findWorktreePath(beanID)
+	worktreePath, err := m.findWorktreePathByID(id)
 	if err != nil {
 		// Worktree not found in active list — it may be stale (prunable).
-		// Run git worktree prune to clean up stale entries.
-		log.Printf("[worktree] worktree for %s not found in active list, pruning stale entries", beanID)
+		log.Printf("[worktree] worktree %s not found in active list, pruning stale entries", id)
 		pruneCmd := exec.Command("git", "worktree", "prune")
 		pruneCmd.Dir = m.repoRoot
 		if pruneOut, pruneErr := pruneCmd.CombinedOutput(); pruneErr != nil {
 			log.Printf("[worktree] failed to prune worktrees: %s: %v", strings.TrimSpace(string(pruneOut)), pruneErr)
 			return fmt.Errorf("git worktree prune: %s: %w", strings.TrimSpace(string(pruneOut)), pruneErr)
 		}
-		log.Printf("[worktree] pruned stale worktree entries for %s", beanID)
+		log.Printf("[worktree] pruned stale worktree entries for %s", id)
 		m.notify()
 		return nil
 	}
@@ -333,33 +273,32 @@ func (m *Manager) Remove(beanID string) error {
 		// If the directory is already gone, git worktree remove fails with
 		// "is not a working tree". Prune stale entries instead.
 		if strings.Contains(outStr, "is not a working tree") {
-			log.Printf("[worktree] worktree for %s is stale, pruning", beanID)
+			log.Printf("[worktree] worktree %s is stale, pruning", id)
 			pruneCmd := exec.Command("git", "worktree", "prune")
 			pruneCmd.Dir = m.repoRoot
 			if pruneOut, pruneErr := pruneCmd.CombinedOutput(); pruneErr != nil {
 				log.Printf("[worktree] failed to prune worktrees: %s: %v", strings.TrimSpace(string(pruneOut)), pruneErr)
 				return fmt.Errorf("git worktree prune: %s: %w", strings.TrimSpace(string(pruneOut)), pruneErr)
 			}
-			log.Printf("[worktree] pruned stale worktree for %s", beanID)
+			log.Printf("[worktree] pruned stale worktree for %s", id)
 			m.notify()
 			return nil
 		}
 
-		log.Printf("[worktree] failed to remove worktree for %s at %s: %s: %v", beanID, worktreePath, outStr, err)
+		log.Printf("[worktree] failed to remove worktree %s at %s: %s: %v", id, worktreePath, outStr, err)
 		return fmt.Errorf("git worktree remove: %s: %w", outStr, err)
 	}
 
-	log.Printf("[worktree] removed worktree for %s (path=%s)", beanID, worktreePath)
-	m.removeMeta(beanID)
+	log.Printf("[worktree] removed worktree %s (path=%s)", id, worktreePath)
+	m.removeMeta(id)
 	m.notify()
 	return nil
 }
 
-// findWorktreePath looks up the actual filesystem path for a bean's worktree
-// by parsing git worktree list output. This is needed because the worktree may
-// have been created from a different workspace/repo root.
+// findWorktreePathByID looks up the actual filesystem path for a worktree
+// by parsing git worktree list output.
 // Must be called with m.mu held.
-func (m *Manager) findWorktreePath(beanID string) (string, error) {
+func (m *Manager) findWorktreePathByID(id string) (string, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	cmd.Dir = m.repoRoot
 	out, err := cmd.Output()
@@ -368,16 +307,15 @@ func (m *Manager) findWorktreePath(beanID string) (string, error) {
 	}
 
 	for _, wt := range parsePorcelain(string(out)) {
-		if wt.BeanID == beanID {
+		if wt.ID == id {
 			return wt.Path, nil
 		}
 	}
-	return "", fmt.Errorf("no worktree for bean %s", beanID)
+	return "", fmt.Errorf("no worktree with id %s", id)
 }
 
-// worktreePath returns the path for a worktree associated with a bean.
+// worktreePath returns the filesystem path for a worktree with the given ID.
 // Worktrees are stored inside the .beans/.worktrees/ directory.
-// Callers must validate beanID with safepath.ValidateBeanID before calling this.
-func (m *Manager) worktreePath(beanID string) string {
-	return filepath.Join(m.beansDir, ".worktrees", beanID)
+func (m *Manager) worktreePath(id string) string {
+	return filepath.Join(m.beansDir, ".worktrees", id)
 }

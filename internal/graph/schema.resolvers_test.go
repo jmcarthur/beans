@@ -2863,33 +2863,6 @@ func TestQueryAgentActions(t *testing.T) {
 	})
 }
 
-func TestStartWorkActionVisibility(t *testing.T) {
-	startWork := findAgentAction("start-work")
-	if startWork == nil {
-		t.Fatal("start-work action not found")
-	}
-
-	tests := []struct {
-		name    string
-		ctx     actionContext
-		visible bool
-	}{
-		{"hidden without worktree", actionContext{InWorktree: false, BeanStatus: "todo"}, false},
-		{"hidden when in-progress", actionContext{InWorktree: true, BeanStatus: "in-progress"}, false},
-		{"visible when todo with worktree", actionContext{InWorktree: true, BeanStatus: "todo"}, true},
-		{"visible when draft with worktree", actionContext{InWorktree: true, BeanStatus: "draft"}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := startWork.Visible(tt.ctx)
-			if got != tt.visible {
-				t.Errorf("Visible() = %v, want %v", got, tt.visible)
-			}
-		})
-	}
-}
-
 func TestIntegrateActionVisibility(t *testing.T) {
 	integrate := findAgentAction("integrate")
 	if integrate == nil {
@@ -2901,11 +2874,10 @@ func TestIntegrateActionVisibility(t *testing.T) {
 		ctx     actionContext
 		visible bool
 	}{
-		{"hidden without worktree", actionContext{InWorktree: false, HasChanges: true}, false},
-		{"hidden when no changes and no new commits", actionContext{InWorktree: true}, false},
-		{"visible with uncommitted changes", actionContext{InWorktree: true, HasChanges: true}, true},
-		{"visible with new commits", actionContext{InWorktree: true, HasNewCommits: true}, true},
-		{"visible with both", actionContext{InWorktree: true, HasChanges: true, HasNewCommits: true}, true},
+		{"hidden when no changes and no new commits", actionContext{}, false},
+		{"visible with uncommitted changes", actionContext{HasChanges: true}, true},
+		{"visible with new commits", actionContext{HasNewCommits: true}, true},
+		{"visible with both", actionContext{HasChanges: true, HasNewCommits: true}, true},
 	}
 
 	for _, tt := range tests {
@@ -3014,7 +2986,7 @@ func TestExecuteAgentAction(t *testing.T) {
 }
 
 func TestAgentActionRegistry(t *testing.T) {
-	expectedActions := []string{"start-work", "commit", "review", "integrate"}
+	expectedActions := []string{"commit", "review", "integrate"}
 	for _, id := range expectedActions {
 		action := findAgentAction(id)
 		if action == nil {
@@ -3029,7 +3001,7 @@ func TestAgentActionRegistry(t *testing.T) {
 		}
 		if action.PromptFunc == nil {
 			t.Errorf("nil PromptFunc for action: %s", id)
-		} else if action.PromptFunc(actionContext{BeanID: "test-bean"}) == "" {
+		} else if action.PromptFunc(actionContext{WorktreeID: "test-wt"}) == "" {
 			t.Errorf("empty prompt for action: %s", id)
 		}
 	}

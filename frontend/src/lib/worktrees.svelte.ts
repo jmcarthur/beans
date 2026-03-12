@@ -3,14 +3,14 @@ import { pipe, subscribe } from 'wonka';
 import { client } from './graphqlClient';
 
 export interface Worktree {
-  beanId: string;
+  id: string;
   name: string | null;
   branch: string;
   path: string;
 }
 
 const WORKTREE_FIELDS = `
-  beanId
+  id
   name
   branch
   path
@@ -21,20 +21,6 @@ const WORKTREES_SUBSCRIPTION = gql`
     worktreesChanged {
       ${WORKTREE_FIELDS}
     }
-  }
-`;
-
-const START_WORK = gql`
-  mutation StartWork($beanId: ID!) {
-    startWork(beanId: $beanId) {
-      ${WORKTREE_FIELDS}
-    }
-  }
-`;
-
-const STOP_WORK = gql`
-  mutation StopWork($beanId: ID!) {
-    stopWork(beanId: $beanId)
   }
 `;
 
@@ -88,38 +74,6 @@ class WorktreeStore {
     }
   }
 
-  async startWork(beanId: string): Promise<boolean> {
-    this.loading = true;
-    this.error = null;
-
-    const result = await client.mutation(START_WORK, { beanId }).toPromise();
-
-    this.loading = false;
-
-    if (result.error) {
-      this.error = result.error.message;
-      return false;
-    }
-
-    return true;
-  }
-
-  async stopWork(beanId: string): Promise<boolean> {
-    this.loading = true;
-    this.error = null;
-
-    const result = await client.mutation(STOP_WORK, { beanId }).toPromise();
-
-    this.loading = false;
-
-    if (result.error) {
-      this.error = result.error.message;
-      return false;
-    }
-
-    return true;
-  }
-
   async createWorktree(name: string): Promise<Worktree | null> {
     this.loading = true;
     this.error = null;
@@ -152,8 +106,8 @@ class WorktreeStore {
     return true;
   }
 
-  hasWorktree(beanId: string): boolean {
-    return this.worktrees.some((wt) => wt.beanId === beanId);
+  hasWorktree(id: string): boolean {
+    return this.worktrees.some((wt) => wt.id === id);
   }
 }
 

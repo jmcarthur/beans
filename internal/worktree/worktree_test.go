@@ -39,16 +39,16 @@ func initTestRepo(t *testing.T) (repoDir, beansDir string) {
 
 func TestParsePorcelain(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		want   int
-		beanID string
+		name string
+		input string
+		want int
+		id   string
 	}{
 		{
-			name:   "empty",
-			input:  "",
-			want:   0,
-			beanID: "",
+			name:  "empty",
+			input: "",
+			want:  0,
+			id:    "",
 		},
 		{
 			name: "main worktree only",
@@ -57,8 +57,8 @@ HEAD abc123
 branch refs/heads/main
 
 `,
-			want:   0,
-			beanID: "",
+			want: 0,
+			id:   "",
 		},
 		{
 			name: "one beans worktree",
@@ -71,8 +71,8 @@ HEAD def456
 branch refs/heads/beans/beans-a1b2
 
 `,
-			want:   1,
-			beanID: "beans-a1b2",
+			want: 1,
+			id:   "beans-a1b2",
 		},
 		{
 			name: "mixed worktrees",
@@ -89,8 +89,8 @@ HEAD ghi789
 branch refs/heads/beans/beans-x1y2
 
 `,
-			want:   1,
-			beanID: "beans-x1y2",
+			want: 1,
+			id:   "beans-x1y2",
 		},
 		{
 			name: "no trailing newline",
@@ -101,8 +101,8 @@ branch refs/heads/main
 worktree /tmp/repo-beans-foo
 HEAD def
 branch refs/heads/beans/beans-foo`,
-			want:   1,
-			beanID: "beans-foo",
+			want: 1,
+			id:   "beans-foo",
 		},
 		{
 			name: "prunable entry is skipped",
@@ -120,8 +120,8 @@ HEAD ghi789
 branch refs/heads/beans/beans-good
 
 `,
-			want:   1,
-			beanID: "beans-good",
+			want: 1,
+			id:   "beans-good",
 		},
 	}
 
@@ -131,8 +131,8 @@ branch refs/heads/beans/beans-good
 			if len(got) != tt.want {
 				t.Fatalf("got %d worktrees, want %d", len(got), tt.want)
 			}
-			if tt.want > 0 && got[0].BeanID != tt.beanID {
-				t.Errorf("got BeanID %q, want %q", got[0].BeanID, tt.beanID)
+			if tt.want > 0 && got[0].ID != tt.id {
+				t.Errorf("got ID %q, want %q", got[0].ID, tt.id)
 			}
 		})
 	}
@@ -152,19 +152,22 @@ func TestCreateAndList(t *testing.T) {
 	}
 
 	// Create a worktree
-	wt, err := mgr.Create("beans-test1")
+	wt, err := mgr.Create("test-worktree")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	if wt.BeanID != "beans-test1" {
-		t.Errorf("BeanID = %q, want %q", wt.BeanID, "beans-test1")
+	if !strings.HasPrefix(wt.ID, "wt-") {
+		t.Errorf("ID = %q, want wt-* prefix", wt.ID)
 	}
-	if wt.Branch != "beans/beans-test1" {
-		t.Errorf("Branch = %q, want %q", wt.Branch, "beans/beans-test1")
+	if wt.Name != "test-worktree" {
+		t.Errorf("Name = %q, want %q", wt.Name, "test-worktree")
+	}
+	if !strings.HasPrefix(wt.Branch, "beans/wt-") {
+		t.Errorf("Branch = %q, want beans/wt-* prefix", wt.Branch)
 	}
 
-	expectedPath := filepath.Join(beansDir, ".worktrees", "beans-test1")
+	expectedPath := filepath.Join(beansDir, ".worktrees", wt.ID)
 	if wt.Path != expectedPath {
 		t.Errorf("Path = %q, want %q", wt.Path, expectedPath)
 	}
@@ -182,23 +185,21 @@ func TestCreateAndList(t *testing.T) {
 	if len(wts) != 1 {
 		t.Fatalf("expected 1 worktree, got %d", len(wts))
 	}
-	if wts[0].BeanID != "beans-test1" {
-		t.Errorf("listed BeanID = %q, want %q", wts[0].BeanID, "beans-test1")
+	if wts[0].ID != wt.ID {
+		t.Errorf("listed ID = %q, want %q", wts[0].ID, wt.ID)
+	}
+	if wts[0].Name != "test-worktree" {
+		t.Errorf("listed Name = %q, want %q", wts[0].Name, "test-worktree")
 	}
 }
 
-func TestCreateDuplicate(t *testing.T) {
+func TestCreateEmptyName(t *testing.T) {
 	repoDir, beansDir := initTestRepo(t)
 	mgr := NewManager(repoDir, beansDir, "")
 
-	_, err := mgr.Create("beans-dup")
-	if err != nil {
-		t.Fatalf("Create: %v", err)
-	}
-
-	_, err = mgr.Create("beans-dup")
+	_, err := mgr.Create("")
 	if err == nil {
-		t.Fatal("expected error creating duplicate worktree")
+		t.Fatal("expected error creating worktree with empty name")
 	}
 }
 
@@ -206,12 +207,12 @@ func TestRemove(t *testing.T) {
 	repoDir, beansDir := initTestRepo(t)
 	mgr := NewManager(repoDir, beansDir, "")
 
-	wt, err := mgr.Create("beans-rm")
+	wt, err := mgr.Create("to-remove")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	if err := mgr.Remove("beans-rm"); err != nil {
+	if err := mgr.Remove(wt.ID); err != nil {
 		t.Fatalf("Remove: %v", err)
 	}
 
@@ -235,7 +236,7 @@ func TestRemoveStaleWorktree(t *testing.T) {
 	mgr := NewManager(repoDir, beansDir, "")
 
 	// Create a worktree, then delete its directory out from under git
-	wt, err := mgr.Create("beans-stale")
+	wt, err := mgr.Create("to-stale")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -244,7 +245,7 @@ func TestRemoveStaleWorktree(t *testing.T) {
 	}
 
 	// Remove should handle the stale entry gracefully via prune
-	if err := mgr.Remove("beans-stale"); err != nil {
+	if err := mgr.Remove(wt.ID); err != nil {
 		t.Fatalf("Remove (stale): %v", err)
 	}
 
@@ -255,32 +256,6 @@ func TestRemoveStaleWorktree(t *testing.T) {
 	}
 	if len(wts) != 0 {
 		t.Fatalf("expected 0 worktrees after stale remove, got %d", len(wts))
-	}
-}
-
-func TestCreateReusesExistingBranch(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "")
-
-	// Create and then remove a worktree, leaving the branch behind
-	_, err := mgr.Create("beans-reuse")
-	if err != nil {
-		t.Fatalf("Create: %v", err)
-	}
-	if err := mgr.Remove("beans-reuse"); err != nil {
-		t.Fatalf("Remove: %v", err)
-	}
-
-	// The branch beans/beans-reuse still exists; creating again should succeed
-	wt, err := mgr.Create("beans-reuse")
-	if err != nil {
-		t.Fatalf("Create (reuse): %v", err)
-	}
-	if wt.BeanID != "beans-reuse" {
-		t.Errorf("BeanID = %q, want %q", wt.BeanID, "beans-reuse")
-	}
-	if _, err := os.Stat(wt.Path); err != nil {
-		t.Errorf("worktree directory does not exist: %v", err)
 	}
 }
 
@@ -312,7 +287,7 @@ func TestCreateUsesBaseRef(t *testing.T) {
 
 	// Create a worktree manager with baseRef pointing to "other"
 	mgr := NewManager(repoDir, beansDir, "other")
-	wt, err := mgr.Create("beans-baseref")
+	wt, err := mgr.Create("baseref-test")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -339,7 +314,7 @@ func TestSubscription(t *testing.T) {
 	defer mgr.Unsubscribe(ch)
 
 	// Create should notify
-	_, err := mgr.Create("beans-sub")
+	wt, err := mgr.Create("sub-test")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -352,7 +327,7 @@ func TestSubscription(t *testing.T) {
 	}
 
 	// Remove should notify
-	if err := mgr.Remove("beans-sub"); err != nil {
+	if err := mgr.Remove(wt.ID); err != nil {
 		t.Fatalf("Remove: %v", err)
 	}
 
@@ -361,34 +336,5 @@ func TestSubscription(t *testing.T) {
 		// Got notification
 	default:
 		t.Error("expected notification after Remove")
-	}
-}
-
-func TestCreateRejectsPathTraversal(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "")
-
-	malicious := []string{
-		"../../../etc/passwd",
-		"bean/evil",
-		"bean..evil",
-		"",
-		"bean evil",
-	}
-	for _, id := range malicious {
-		_, err := mgr.Create(id)
-		if err == nil {
-			t.Errorf("Create(%q) should have failed but didn't", id)
-		}
-	}
-}
-
-func TestRemoveRejectsPathTraversal(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "")
-
-	err := mgr.Remove("../../../etc/passwd")
-	if err == nil {
-		t.Error("Remove with path traversal should have failed")
 	}
 }

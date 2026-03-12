@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { beansStore } from '$lib/beans.svelte';
   import { worktreeStore } from '$lib/worktrees.svelte';
   import { agentStatusesStore } from '$lib/agentStatuses.svelte';
   import { configStore } from '$lib/config.svelte';
@@ -13,10 +12,9 @@
 
   const workspaceItems = $derived(
     worktreeStore.worktrees.map((wt): WorkspaceItem => {
-      const bean = beansStore.get(wt.beanId);
       return {
-        id: wt.beanId,
-        label: bean?.title ?? wt.name ?? wt.branch
+        id: wt.id,
+        label: wt.name ?? wt.branch
       };
     })
   );
@@ -29,7 +27,7 @@
 
     const wt = await worktreeStore.createWorktree(name);
     if (wt) {
-      ui.navigateTo(wt.beanId);
+      ui.navigateTo(wt.id);
     }
   }
 

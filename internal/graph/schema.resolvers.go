@@ -511,65 +511,13 @@ func (r *mutationResolver) RemoveBlockedBy(ctx context.Context, id string, targe
 	return b, nil
 }
 
-// StartWork is the resolver for the startWork field.
-func (r *mutationResolver) StartWork(ctx context.Context, beanID string) (*model.Worktree, error) {
-	if r.WorktreeMgr == nil {
-		return nil, fmt.Errorf("worktree support not available")
-	}
-
-	// Normalize the bean ID
-	normalizedID, _ := r.Core.NormalizeID(beanID)
-
-	// Verify the bean exists
-	if _, err := r.Core.Get(normalizedID); err != nil {
-		return nil, fmt.Errorf("bean not found: %s", beanID)
-	}
-
-	// Create the worktree
-	wt, err := r.WorktreeMgr.Create(normalizedID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start watching the worktree's .beans/ directory for bean changes
-	if err := r.Core.WatchWorktreeBeans(wt.Path); err != nil {
-		// Non-fatal: worktree was created successfully, watching is best-effort
-		fmt.Printf("[beans] warning: failed to watch worktree beans: %v\n", err)
-	}
-
-	return worktreeToModel(wt), nil
-}
-
-// StopWork is the resolver for the stopWork field.
-func (r *mutationResolver) StopWork(ctx context.Context, beanID string) (bool, error) {
-	if r.WorktreeMgr == nil {
-		return false, fmt.Errorf("worktree support not available")
-	}
-
-	normalizedID, _ := r.Core.NormalizeID(beanID)
-
-	// Find the worktree path before removing (for unwatching)
-	worktrees, _ := r.WorktreeMgr.List()
-	for _, wt := range worktrees {
-		if wt.BeanID == normalizedID {
-			r.Core.UnwatchWorktreeBeans(wt.Path)
-			break
-		}
-	}
-
-	if err := r.WorktreeMgr.Remove(normalizedID); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // CreateWorktree is the resolver for the createWorktree field.
 func (r *mutationResolver) CreateWorktree(ctx context.Context, name string) (*model.Worktree, error) {
 	if r.WorktreeMgr == nil {
 		return nil, fmt.Errorf("worktree support not available")
 	}
 
-	wt, err := r.WorktreeMgr.CreateStandalone(name)
+	wt, err := r.WorktreeMgr.Create(name)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +539,7 @@ func (r *mutationResolver) RemoveWorktree(ctx context.Context, id string) (bool,
 	// Find the worktree path before removing (for unwatching)
 	worktrees, _ := r.WorktreeMgr.List()
 	for _, wt := range worktrees {
-		if wt.BeanID == id {
+		if wt.ID == id {
 			r.Core.UnwatchWorktreeBeans(wt.Path)
 			break
 		}
@@ -748,7 +696,7 @@ func (r *mutationResolver) ExecuteAgentAction(ctx context.Context, beanID string
 		}
 	}
 
-	actCtx := actionContext{BeanID: beanID, WorkDir: workDir}
+	actCtx := actionContext{WorktreeID: beanID, WorkDir: workDir}
 	if err := r.AgentMgr.SendMessage(beanID, workDir, action.PromptFunc(actCtx), nil); err != nil {
 		return false, err
 	}
@@ -901,14 +849,13 @@ func (r *queryResolver) HasDirtyBeans(ctx context.Context) (bool, error) {
 // AgentActions is the resolver for the agentActions field.
 func (r *queryResolver) AgentActions(ctx context.Context, beanID string) ([]*model.AgentAction, error) {
 	// Build action context for visibility filtering
-	actCtx := actionContext{BeanID: beanID}
+	actCtx := actionContext{WorktreeID: beanID}
 
-	// Check if this bean has a worktree and gather worktree state
+	// Check if this worktree exists and gather its state
 	if r.WorktreeMgr != nil {
 		if wts, err := r.WorktreeMgr.List(); err == nil {
 			for _, wt := range wts {
-				if wt.BeanID == beanID {
-					actCtx.InWorktree = true
+				if wt.ID == beanID {
 					actCtx.WorkDir = wt.Path
 					actCtx.HasChanges = gitutil.HasChanges(wt.Path)
 					actCtx.HasNewCommits = gitutil.HasUnmergedCommits(wt.Path, "main")
@@ -916,11 +863,6 @@ func (r *queryResolver) AgentActions(ctx context.Context, beanID string) ([]*mod
 				}
 			}
 		}
-	}
-
-	// Look up bean status
-	if b, err := r.Core.Get(beanID); err == nil {
-		actCtx.BeanStatus = b.Status
 	}
 
 	var result []*model.AgentAction
