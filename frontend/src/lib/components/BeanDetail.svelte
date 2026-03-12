@@ -16,6 +16,15 @@
     }
   `;
 
+  const UPDATE_BEAN = gql`
+    mutation UpdateBean($id: ID!, $input: UpdateBeanInput!) {
+      updateBean(id: $id, input: $input) {
+        id
+        status
+      }
+    }
+  `;
+
   interface Props {
     bean: Bean;
     onSelect?: (bean: Bean) => void;
@@ -61,6 +70,42 @@
       worktreeError = result.error.message;
     }
     archiving = false;
+  }
+
+  type WorkflowAction = { label: string; status: string; color: string };
+
+  const workflowActions = $derived.by((): WorkflowAction[] => {
+    switch (bean.status) {
+      case 'draft':
+        return [
+          { label: 'Todo', status: 'todo', color: 'bg-sky-600' },
+          { label: 'Scrap', status: 'scrapped', color: 'bg-danger' }
+        ];
+      case 'todo':
+        return [{ label: 'Scrap', status: 'scrapped', color: 'bg-danger' }];
+      case 'in-progress':
+        return [
+          { label: 'Complete', status: 'completed', color: 'bg-success' },
+          { label: 'Scrap', status: 'scrapped', color: 'bg-danger' }
+        ];
+      default:
+        return [];
+    }
+  });
+
+  let updatingStatus = $state(false);
+
+  async function updateStatus(newStatus: string) {
+    updatingStatus = true;
+    const oldStatus = bean.status;
+    beansStore.optimisticUpdate(bean.id, { status: newStatus });
+    const result = await client
+      .mutation(UPDATE_BEAN, { id: bean.id, input: { status: newStatus } })
+      .toPromise();
+    if (result.error) {
+      beansStore.optimisticUpdate(bean.id, { status: oldStatus });
+    }
+    updatingStatus = false;
   }
 
   async function startWork() {
@@ -138,9 +183,11 @@
     </div>
     <div class="flex items-center gap-2">
       <h1 class="flex-1 text-2xl font-bold text-text">{bean.title}</h1>
-      {#if canStartWork}
+
+      <!-- Workflow action buttons -->
+      {#if canStartWork && bean.status === 'todo'}
         <button
-          class="flex items-center gap-2 rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          class="cursor-pointer flex items-center gap-2 rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           onclick={startWork}
           disabled={startingWork}
         >
@@ -152,9 +199,22 @@
           Start Work
         </button>
       {/if}
+      {#each workflowActions as action}
+        <button
+          class={[
+            'cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50',
+            action.color
+          ]}
+          onclick={() => updateStatus(action.status)}
+          disabled={updatingStatus}
+        >
+          {action.label}
+        </button>
+      {/each}
+
       {#if isArchivable}
         <button
-          class="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt disabled:opacity-50"
+          class="cursor-pointer flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt disabled:opacity-50"
           onclick={archiveBean}
           disabled={archiving}
           title="Archive this bean"
@@ -165,7 +225,7 @@
       {/if}
       {#if onEdit}
         <button
-          class="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt"
+          class="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt"
           onclick={() => onEdit(bean)}>Edit</button
         >
       {/if}
