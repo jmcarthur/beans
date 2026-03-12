@@ -37,6 +37,13 @@
   let pendingImages = $state<{ data: string; mediaType: string; preview: string }[]>([]);
   let isDragging = $state(false);
   let fileInputEl: HTMLInputElement | undefined = $state();
+  let textareaEl: HTMLTextAreaElement | undefined = $state();
+
+  // Focus the textarea when switching to a new bean/workspace
+  $effect(() => {
+    beanId;
+    textareaEl?.focus();
+  });
 
   // Load persisted composer input when beanId changes
   $effect(() => {
@@ -164,6 +171,7 @@
     ondrop={handleDrop}
   >
     <textarea
+      bind:this={textareaEl}
       bind:value={inputText}
       onkeydown={handleKeydown}
       onpaste={handlePaste}
