@@ -198,6 +198,16 @@ a,
   @apply my-3 rounded;
 }
 
+/* ── Agent prose: uniform font size for chat markdown ── */
+.agent-prose *:not(pre, pre *, code) {
+  font-size: inherit;
+}
+
+.agent-prose :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  font-weight: bold;
+}
+
 /* ── Diff line styling ──────────────────────── */
 .diff-add {
   @apply bg-green-500/15 text-success;

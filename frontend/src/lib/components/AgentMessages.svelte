@@ -197,22 +197,3 @@
     </button>
   {/if}
 </div>
-
-<style>
-  /* Ensure rendered markdown inherits uniform font size,
-	   but exclude code blocks so Shiki highlighting renders properly */
-  .agent-prose :global(*:not(pre, pre *, code)) {
-    font-family: inherit;
-    font-size: inherit;
-  }
-
-  .agent-prose :global(h1),
-  .agent-prose :global(h2),
-  .agent-prose :global(h3),
-  .agent-prose :global(h4),
-  .agent-prose :global(h5),
-  .agent-prose :global(h6) {
-    font-size: inherit;
-    font-weight: bold;
-  }
-</style>

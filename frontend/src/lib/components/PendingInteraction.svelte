@@ -131,12 +131,3 @@
     {/if}
   </div>
 {/if}
-
-<style>
-  /* Ensure rendered markdown inherits uniform font size,
-	   but exclude code blocks so Shiki highlighting renders properly */
-  .agent-prose :global(*:not(pre, pre *, code)) {
-    font-family: inherit;
-    font-size: inherit;
-  }
-</style>
