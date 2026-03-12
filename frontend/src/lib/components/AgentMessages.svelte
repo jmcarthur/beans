@@ -109,8 +109,7 @@
     {:else}
       {#each messages as msg, i}
         {#if msg.role === 'USER'}
-          <div class="flex gap-2">
-            <span class="shrink-0 font-bold text-accent select-none">&gt;</span>
+          <div class="rounded-lg bg-surface-alt px-3 py-2">
             <div>
               {#if msg.content}
                 <p class="whitespace-pre-wrap text-text">{msg.content}</p>
