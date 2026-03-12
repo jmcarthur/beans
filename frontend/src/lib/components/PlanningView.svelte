@@ -15,7 +15,7 @@
   import AgentChat from '$lib/components/AgentChat.svelte';
   import ChangesPane from '$lib/components/ChangesPane.svelte';
   import FilterInput from '$lib/components/FilterInput.svelte';
-  import PaneHeader from '$lib/components/PaneHeader.svelte';
+
   import TerminalPane from '$lib/components/TerminalPane.svelte';
   import ViewToolbar from '$lib/components/ViewToolbar.svelte';
 
@@ -100,7 +100,6 @@
     {#snippet mainPanel()}
       {#snippet backlogBoard()}
         <div class="flex h-full flex-col bg-surface">
-          <PaneHeader title={planningView === 'backlog' ? 'Backlog' : 'Board'} />
           {#if planningView === 'backlog'}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -177,17 +176,12 @@
     {/snippet}
 
     {#snippet agentPanel()}
-      <div class="flex h-full flex-col bg-surface">
-        <PaneHeader title="Agent" onClose={() => ui.togglePlanningChat()} />
-        <div class="min-h-0 flex-1">
-          <AgentChat beanId={CENTRAL_SESSION_ID} store={agentStore} />
-        </div>
-      </div>
+      <AgentChat beanId={CENTRAL_SESSION_ID} store={agentStore} />
     {/snippet}
 
     {#snippet terminalPanel()}
       {#if ui.terminalInitialized}
-        <TerminalPane sessionId={CENTRAL_SESSION_ID} onClose={() => ui.toggleTerminal()} />
+        <TerminalPane sessionId={CENTRAL_SESSION_ID} />
       {/if}
     {/snippet}
 

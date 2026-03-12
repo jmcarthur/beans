@@ -6,7 +6,7 @@
   import SplitPane from './SplitPane.svelte';
   import AgentChat from './AgentChat.svelte';
   import ChangesPane from './ChangesPane.svelte';
-  import PaneHeader from './PaneHeader.svelte';
+
   import TerminalPane from './TerminalPane.svelte';
   import ViewToolbar from './ViewToolbar.svelte';
 
@@ -38,17 +38,12 @@
 {/snippet}
 
 {#snippet agentChatPanel()}
-  <div class="flex h-full flex-col bg-surface">
-    <PaneHeader title="Agent" />
-    <div class="min-h-0 flex-1">
-      <AgentChat beanId={worktreeId} store={agentStore} />
-    </div>
-  </div>
+  <AgentChat beanId={worktreeId} store={agentStore} />
 {/snippet}
 
 {#snippet terminalPanel()}
   {#if ui.terminalInitialized}
-    <TerminalPane sessionId={worktreeId} onClose={() => ui.toggleTerminal()} />
+    <TerminalPane sessionId={worktreeId} />
   {/if}
 {/snippet}
 

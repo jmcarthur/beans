@@ -3,14 +3,11 @@
   import { Terminal } from '@xterm/xterm';
   import { FitAddon } from '@xterm/addon-fit';
   import '@xterm/xterm/css/xterm.css';
-  import PaneHeader from './PaneHeader.svelte';
-
   interface Props {
     sessionId: string;
-    onClose: () => void;
   }
 
-  let { sessionId, onClose }: Props = $props();
+  let { sessionId }: Props = $props();
 
   let terminalEl: HTMLDivElement | undefined = $state();
   let terminal: Terminal | undefined;
@@ -129,7 +126,6 @@
   });
 </script>
 
-<div class="flex h-full flex-col bg-[#1a1a2e]">
-  <PaneHeader title="Terminal" {onClose} />
+<div class="flex h-full min-h-0 flex-col bg-[#1a1a2e]">
   <div class="min-h-0 flex-1 px-1" bind:this={terminalEl}></div>
 </div>

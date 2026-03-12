@@ -97,32 +97,32 @@
       </div>
 
       {#each workspaceItems as item (item.id)}
-        <div class="group flex items-center">
-          <button
-            onclick={() => ui.navigateTo(item.id)}
-            class={[
-              'flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
-              ui.activeView === item.id
-                ? 'bg-surface font-medium text-text'
-                : 'text-text-muted hover:bg-surface hover:text-text'
-            ]}
-          >
-            <span class="min-w-0 flex-1 truncate">{item.label}</span>
-            {#if agentStatusesStore.isRunning(item.id)}
-              <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
-            {/if}
-          </button>
-          <button
+        <button
+          onclick={() => ui.navigateTo(item.id)}
+          class={[
+            'group flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors',
+            ui.activeView === item.id
+              ? 'bg-surface font-medium text-text'
+              : 'text-text-muted hover:bg-surface hover:text-text'
+          ]}
+        >
+          <span class="min-w-0 flex-1 truncate">{item.label}</span>
+          {#if agentStatusesStore.isRunning(item.id)}
+            <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success"></span>
+          {/if}
+          <span
+            role="button"
+            tabindex="-1"
             onclick={(e) => {
               e.stopPropagation();
               confirmingRemoveId = item.id;
             }}
-            class="mr-1 cursor-pointer rounded p-1 text-text-faint opacity-0 transition-opacity hover:bg-surface hover:text-danger group-hover:opacity-100"
+            class="cursor-pointer rounded p-1 text-text-faint opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
             aria-label="Destroy worktree"
           >
             <span class="icon-[uil--archive] block size-3.5"></span>
-          </button>
-        </div>
+          </span>
+        </button>
       {/each}
     {/if}
   </div>

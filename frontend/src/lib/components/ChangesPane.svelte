@@ -4,7 +4,7 @@
   import { changesStore, type FileChange } from '$lib/changes.svelte';
   import { ui } from '$lib/uiState.svelte';
   import { client } from '$lib/graphqlClient';
-  import PaneHeader from '$lib/components/PaneHeader.svelte';
+
   import SplitPane from '$lib/components/SplitPane.svelte';
 
   interface AgentAction {
@@ -363,14 +363,6 @@
 {/snippet}
 
 <div class="flex h-full flex-col bg-surface">
-  <PaneHeader title="Changes" onClose={() => ui.toggleChanges()}>
-    {#snippet extra()}
-      {#if totalCount > 0}
-        <span class="ml-1 text-sm text-text-muted">({totalCount})</span>
-      {/if}
-    {/snippet}
-  </PaneHeader>
-
   {@render tabSwitcher()}
 
   {#if selectedFile}

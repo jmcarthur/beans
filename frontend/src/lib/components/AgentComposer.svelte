@@ -137,7 +137,7 @@
   }
 </script>
 
-<div class="border-t border-border bg-surface p-3">
+<div class="p-3">
   {#if isRunning}
     <div class="flex items-center gap-2 px-1 pb-2 text-text-muted">
       <span class="agent-spinner"></span>
@@ -152,69 +152,64 @@
       </span>
     </div>
   {/if}
-  <div class="flex items-end gap-2">
-    <div
-      class={[
-        'relative flex flex-1 flex-col rounded border bg-surface-alt',
-        isDragging ? 'border-accent ring-2 ring-accent/40' : 'border-border'
-      ]}
-      role="region"
-      aria-label="Message input with drag and drop for images"
-      ondragover={handleDragOver}
-      ondragleave={handleDragLeave}
-      ondrop={handleDrop}
-    >
-      <textarea
-        bind:value={inputText}
-        onkeydown={handleKeydown}
-        onpaste={handlePaste}
-        placeholder="Send a message..."
-        rows={1}
-        class="flex-1 resize-none rounded bg-transparent px-3 py-2 text-sm
-				text-text placeholder:text-text-faint
+  <div
+    class={[
+      'relative flex flex-col rounded border bg-surface-alt',
+      isDragging ? 'border-accent ring-2 ring-accent/40' : 'border-border'
+    ]}
+    role="region"
+    aria-label="Message input with drag and drop for images"
+    ondragover={handleDragOver}
+    ondragleave={handleDragLeave}
+    ondrop={handleDrop}
+  >
+    <textarea
+      bind:value={inputText}
+      onkeydown={handleKeydown}
+      onpaste={handlePaste}
+      placeholder="Send a message..."
+      rows={1}
+      class="max-h-48 resize-none rounded bg-transparent px-3 py-2 text-sm
+				text-text [field-sizing:content] placeholder:text-text-faint
 				focus:outline-none"
-      ></textarea>
-      <div class="flex items-center px-2 pb-1.5">
-        <input
-          bind:this={fileInputEl}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          multiple
-          class="hidden"
-          onchange={handleFileInput}
-        />
-        <button
-          type="button"
-          onclick={() => fileInputEl?.click()}
-          class="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface hover:text-text"
-          aria-label="Attach images"
-        >
-          <span class="icon-[uil--image-plus] size-4"></span>
-        </button>
-      </div>
-    </div>
-
-    <button
-      onclick={send}
-      disabled={!inputText.trim() && pendingImages.length === 0}
-      class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded bg-accent px-3 py-2
-				text-sm text-accent-text transition-colors hover:bg-accent/90
-				disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <span class="icon-[uil--message] size-4"></span>
-      Send
-    </button>
-
-    {#if isRunning}
+    ></textarea>
+    <div class="flex items-center gap-1 px-2 pb-1.5">
+      <input
+        bind:this={fileInputEl}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
+        class="hidden"
+        onchange={handleFileInput}
+      />
       <button
-        onclick={onStop}
-        class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded bg-danger px-3 py-2
-					text-sm text-white transition-colors hover:bg-danger/90"
+        type="button"
+        onclick={() => fileInputEl?.click()}
+        class="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface hover:text-text"
+        aria-label="Attach images"
       >
-        <span class="icon-[uil--stop-circle] size-4"></span>
-        Stop
+        <span class="icon-[uil--image-plus] size-4"></span>
       </button>
-    {/if}
+      <div class="flex-1"></div>
+      {#if isRunning}
+        <button
+          onclick={onStop}
+          class="cursor-pointer rounded p-1 text-danger transition-colors hover:bg-surface hover:text-danger"
+          aria-label="Stop agent"
+        >
+          <span class="icon-[uil--stop-circle] size-4"></span>
+        </button>
+      {/if}
+      <button
+        onclick={send}
+        disabled={!inputText.trim() && pendingImages.length === 0}
+        class="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface hover:text-text
+					disabled:cursor-not-allowed disabled:opacity-30"
+        aria-label="Send message"
+      >
+        <span class="icon-[uil--message] size-4"></span>
+      </button>
+    </div>
   </div>
 
   <!-- Pending image thumbnails -->
