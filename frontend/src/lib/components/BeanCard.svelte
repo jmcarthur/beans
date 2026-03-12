@@ -16,7 +16,6 @@
 
   let { bean, variant = 'list', selected = false, onclick }: Props = $props();
 
-  const childCount = $derived(variant === 'list' ? beansStore.children(bean.id).length : 0);
   const hasWorktree = $derived(variant !== 'compact' && worktreeStore.hasWorktree(bean.id));
   const agentRunning = $derived(hasWorktree && agentStatusesStore.isRunning(bean.id));
   const isArchivable = $derived(bean.status === 'completed' || bean.status === 'scrapped');
@@ -125,9 +124,6 @@
           onclick={handleArchive}
           disabled={archiving}
         ></button>
-      {/if}
-      {#if variant === 'list' && childCount > 0}
-        <span class="shrink-0 text-[10px] text-text-faint">+{childCount}</span>
       {/if}
     </div>
   {/if}

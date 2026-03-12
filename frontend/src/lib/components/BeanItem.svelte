@@ -38,12 +38,12 @@
   }
 </script>
 
-<div class="bean-item" data-bean-id={bean.id}>
+<div class="bean-item my-1" data-bean-id={bean.id}>
   <!-- Drop indicator before this card -->
   <div
     class={[
-      'mx-1 h-0.5 rounded-full transition-colors',
-      backlogDrag.showIndicator(parentId, index, bean.id) ? 'bg-accent' : 'bg-transparent'
+      'mx-1 rounded-full transition-colors',
+      backlogDrag.showIndicator(parentId, index, bean.id) ? 'h-0.5 bg-accent' : 'h-0'
     ]}
   ></div>
 
@@ -71,7 +71,7 @@
 
   {#if filteredChildren.length > 0}
     <div
-      class="mt-1 ml-4 border-l border-border pl-2"
+      class="ml-6"
       ondragover={(e) => backlogDrag.hoverList(e, bean.id, filteredChildren.length)}
       ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, bean.id)}
       ondrop={(e) => backlogDrag.drop(e, bean.id, filteredChildren)}
@@ -92,10 +92,10 @@
       <!-- Drop indicator at end of children -->
       <div
         class={[
-          'mx-1 h-0.5 rounded-full transition-colors',
+          'mx-1 rounded-full transition-colors',
           backlogDrag.showEndIndicator(bean.id, filteredChildren.length)
-            ? 'bg-accent'
-            : 'bg-transparent'
+            ? 'h-0.5 bg-accent'
+            : 'h-0'
         ]}
       ></div>
     </div>

@@ -130,10 +130,10 @@
 
                 <div
                   class={[
-                    'mx-1 h-0.5 rounded-full transition-colors',
+                    'mx-1 rounded-full transition-colors',
                     backlogDrag.showEndIndicator(null, filteredTopLevelBeans.length)
-                      ? 'bg-accent'
-                      : 'bg-transparent'
+                      ? 'h-0.5 bg-accent'
+                      : 'h-0'
                   ]}
                 ></div>
               </div>
