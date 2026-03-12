@@ -32,9 +32,11 @@
     ui.syncFromUrl(page.url.pathname);
   });
 
-  // Fall back to planning view if agents are disabled or the workspace's worktree is removed
+  // Fall back to planning view if agents are disabled or the workspace's worktree is removed.
+  // Wait for worktreeStore to initialize before checking — otherwise a cold page load
+  // to a workspace route would redirect before the subscription delivers data.
   $effect(() => {
-    if (!ui.isPlanning && (!configStore.agentEnabled || !worktreeStore.hasWorktree(ui.activeView))) {
+    if (!ui.isPlanning && worktreeStore.initialized && (!configStore.agentEnabled || !worktreeStore.hasWorktree(ui.activeView))) {
       ui.navigateTo('planning');
     }
   });

@@ -40,6 +40,7 @@ const REMOVE_WORKTREE = gql`
 
 class WorktreeStore {
   worktrees = $state<Worktree[]>([]);
+  initialized = $state(false);
   loading = $state(false);
   error = $state<string | null>(null);
 
@@ -54,12 +55,14 @@ class WorktreeStore {
         if (result.error) {
           console.error('Worktree subscription error:', result.error);
           this.error = result.error.message;
+          this.initialized = true;
           return;
         }
 
         const wts = result.data?.worktreesChanged;
         if (wts) {
           this.worktrees = wts;
+          this.initialized = true;
         }
       })
     );
