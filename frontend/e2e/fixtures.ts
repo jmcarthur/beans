@@ -41,6 +41,7 @@ async function waitForServer(port: number, timeoutMs = 10_000): Promise<void> {
 class BeansCLI {
   constructor(
     readonly beansPath: string,
+    readonly projectDir: string,
     private binaryPath: string,
     readonly baseURL: string
   ) {}
@@ -85,15 +86,23 @@ export const test = base.extend<Fixtures>({
   beans: async ({ page }, use, testInfo) => {
     const { beans: beansBin, beansServe } = getBinaries();
 
-    // Create isolated temp directory
-    const beansPath = mkdtempSync(join(tmpdir(), 'beans-e2e-'));
+    // Create isolated temp project directory with a git repo
+    const projectDir = mkdtempSync(join(tmpdir(), 'beans-e2e-'));
+    execFileSync('git', ['init'], { cwd: projectDir, timeout: 10_000 });
+    execFileSync('git', ['commit', '--allow-empty', '-m', 'init'], {
+      cwd: projectDir,
+      timeout: 10_000,
+      env: { ...process.env, GIT_AUTHOR_NAME: 'test', GIT_AUTHOR_EMAIL: 'test@test', GIT_COMMITTER_NAME: 'test', GIT_COMMITTER_EMAIL: 'test@test' }
+    });
 
-    // Initialize beans directory
-    execFileSync(beansBin, ['--beans-path', beansPath, 'init'], {
-      cwd: PROJECT_ROOT,
+    // Initialize beans directory inside the project
+    execFileSync(beansBin, ['init'], {
+      cwd: projectDir,
       encoding: 'utf-8',
       timeout: 10_000
     });
+
+    const beansPath = join(projectDir, '.beans');
 
     // Pick a unique port based on worker + test index
     const port = BASE_PORT + testInfo.workerIndex * 100 + testInfo.parallelIndex;
@@ -117,11 +126,11 @@ export const test = base.extend<Fixtures>({
       // Navigate away so tests start fresh with goto()
       await page.goto('about:blank');
 
-      const cli = new BeansCLI(beansPath, beansBin, `http://localhost:${port}`);
+      const cli = new BeansCLI(beansPath, projectDir, beansBin, `http://localhost:${port}`);
       await use(cli);
     } finally {
       server.kill();
-      rmSync(beansPath, { recursive: true, force: true });
+      rmSync(projectDir, { recursive: true, force: true });
     }
   },
 
