@@ -25,6 +25,8 @@ class BacklogDragState {
   /** The bean ID being hovered for reparenting */
   reparentTargetId = $state<string | null>(null);
   dropMode = $state<DropMode>('reorder');
+  /** The target status when dropping into a different section */
+  targetStatus = $state<string | null>(null);
 
   get isDragging() {
     return this.draggedBeanId !== null;
@@ -42,15 +44,18 @@ class BacklogDragState {
     this.dropIndex = null;
     this.reparentTargetId = null;
     this.dropMode = 'reorder';
+    this.targetStatus = null;
   }
 
-  hoverCard(e: DragEvent, parentId: string | null, index: number, beanId: string) {
+  hoverCard(e: DragEvent, parentId: string | null, index: number, beanId: string, status?: string) {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer!.dropEffect = 'move';
 
     // Don't allow dropping on yourself
     if (beanId === this.draggedBeanId) return;
+
+    if (status) this.targetStatus = status;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const relativeY = (e.clientY - rect.top) / rect.height;
@@ -76,12 +81,13 @@ class BacklogDragState {
     }
   }
 
-  hoverList(e: DragEvent, parentId: string | null, beanCount: number) {
+  hoverList(e: DragEvent, parentId: string | null, beanCount: number, status?: string) {
     e.preventDefault();
     e.dataTransfer!.dropEffect = 'move';
     this.dropMode = 'reorder';
     this.reparentTargetId = null;
     this.dropTargetParent = parentId;
+    this.targetStatus = status ?? null;
     if (this.dropIndex === null || this.dropTargetParent !== parentId) {
       this.dropIndex = beanCount;
     }
@@ -107,12 +113,14 @@ class BacklogDragState {
     const targetIdx = this.dropIndex;
     const beanId = this.draggedBeanId;
     const reparentTarget = this.reparentTargetId;
+    const newStatus = this.targetStatus;
 
     this.dropTargetParent = undefined;
     this.dropIndex = null;
     this.draggedBeanId = null;
     this.reparentTargetId = null;
     this.dropMode = 'reorder';
+    this.targetStatus = null;
 
     if (!beanId) return;
 
@@ -120,25 +128,30 @@ class BacklogDragState {
       const targetChildren = beansStore.children(reparentTarget);
       applyReparent(beanId, reparentTarget, targetChildren);
     } else {
-      applyDrop(beans, beanId, targetIdx ?? beans.length, { newParentId: parentId });
+      applyDrop(beans, beanId, targetIdx ?? beans.length, {
+        newParentId: parentId,
+        newStatus: newStatus ?? undefined
+      });
     }
   }
 
   /** Check if a drop indicator should show at this position */
-  showIndicator(parentId: string | null, index: number, beanId: string): boolean {
+  showIndicator(parentId: string | null, index: number, beanId: string, status?: string): boolean {
     return (
       this.dropMode === 'reorder' &&
       this.dropTargetParent === parentId &&
+      (!status || this.targetStatus === status) &&
       this.draggedBeanId !== null &&
       this.draggedBeanId !== beanId &&
       this.dropIndex === index
     );
   }
 
-  showEndIndicator(parentId: string | null, count: number): boolean {
+  showEndIndicator(parentId: string | null, count: number, status?: string): boolean {
     return (
       this.dropMode === 'reorder' &&
       this.dropTargetParent === parentId &&
+      (!status || this.targetStatus === status) &&
       this.draggedBeanId !== null &&
       this.dropIndex === count
     );

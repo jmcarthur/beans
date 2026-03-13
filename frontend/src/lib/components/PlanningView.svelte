@@ -44,14 +44,19 @@
 
   const topLevelBeans = $derived(beansStore.all.filter((b) => !b.parentId));
 
-  const filteredTopLevelBeans = $derived.by(() => {
+  function filterBeans(beans: typeof topLevelBeans) {
     const text = ui.filterText;
-    if (!text) return topLevelBeans;
-    return topLevelBeans.filter((bean) => {
+    if (!text) return beans;
+    return beans.filter((bean) => {
       if (matchesFilter(bean, text)) return true;
       return beansStore.children(bean.id).some((child) => matchesFilter(child, text));
     });
-  });
+  }
+
+  const filteredTodoBeans = $derived(filterBeans(topLevelBeans.filter((b) => b.status === 'todo')));
+  const filteredDraftBeans = $derived(
+    filterBeans(topLevelBeans.filter((b) => b.status === 'draft'))
+  );
 
   function handleKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === '/')) {
@@ -113,39 +118,47 @@
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="min-h-0 flex-1 overflow-auto bg-surface-alt" onclick={handlePlanningClick}>
-              <div
-                class="p-3"
-                ondragover={(e) => backlogDrag.hoverList(e, null, filteredTopLevelBeans.length)}
-                ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, null)}
-                ondrop={(e) => backlogDrag.drop(e, null, filteredTopLevelBeans)}
-                role="list"
-              >
-                {#each filteredTopLevelBeans as bean, i (bean.id)}
-                  <BeanItem
-                    {bean}
-                    parentId={null}
-                    index={i}
-                    selectedId={ui.currentBean?.id}
-                    onSelect={(b) => ui.selectBean(b)}
-                    filterText={ui.filterText}
-                  />
-                {:else}
-                  {#if !beansStore.loading}
-                    <p class="text-text-muted text-center py-8 text-sm">
-                      {ui.filterText ? 'No matching beans' : 'No beans yet'}
-                    </p>
-                  {/if}
-                {/each}
-
+              {#snippet backlogSection(beans: typeof filteredTodoBeans, status: string, label: string)}
                 <div
-                  class={[
-                    'mx-1 rounded-full transition-colors',
-                    backlogDrag.showEndIndicator(null, filteredTopLevelBeans.length)
-                      ? 'h-0.5 bg-accent'
-                      : 'h-0'
-                  ]}
-                ></div>
-              </div>
+                  class="p-3"
+                  ondragover={(e) => backlogDrag.hoverList(e, null, beans.length, status)}
+                  ondragleave={(e) => backlogDrag.leaveList(e, e.currentTarget, null)}
+                  ondrop={(e) => backlogDrag.drop(e, null, beans)}
+                  role="list"
+                >
+                  <h3 class="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-text-faint">
+                    {label}
+                    <span class="font-normal">{beans.length}</span>
+                  </h3>
+                  {#each beans as bean, i (bean.id)}
+                    <BeanItem
+                      {bean}
+                      parentId={null}
+                      index={i}
+                      selectedId={ui.currentBean?.id}
+                      onSelect={(b) => ui.selectBean(b)}
+                      filterText={ui.filterText}
+                      sectionStatus={status}
+                    />
+                  {:else}
+                    {#if !beansStore.loading}
+                      <p class="text-center py-4 text-sm text-text-muted">No beans</p>
+                    {/if}
+                  {/each}
+
+                  <div
+                    class={[
+                      'mx-1 rounded-full transition-colors',
+                      backlogDrag.showEndIndicator(null, beans.length, status)
+                        ? 'h-0.5 bg-accent'
+                        : 'h-0'
+                    ]}
+                  ></div>
+                </div>
+              {/snippet}
+
+              {@render backlogSection(filteredTodoBeans, 'todo', 'Todo')}
+              {@render backlogSection(filteredDraftBeans, 'draft', 'Draft')}
             </div>
           {:else}
             <BoardView onSelect={(b) => ui.selectBean(b)} selectedId={ui.currentBean?.id} />

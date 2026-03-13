@@ -15,6 +15,8 @@
     selectedId?: string | null;
     onSelect?: (bean: Bean) => void;
     filterText?: string;
+    /** Status of the backlog section this bean is in (for cross-section drag) */
+    sectionStatus?: string;
   }
 
   let {
@@ -24,7 +26,8 @@
     depth = 0,
     selectedId = null,
     onSelect,
-    filterText = ''
+    filterText = '',
+    sectionStatus
   }: Props = $props();
 
   const children = $derived(beansStore.children(bean.id));
@@ -43,7 +46,7 @@
   <div
     class={[
       'mx-1 rounded-full transition-colors',
-      backlogDrag.showIndicator(parentId, index, bean.id) ? 'h-0.5 bg-accent' : 'h-0'
+      backlogDrag.showIndicator(parentId, index, bean.id, sectionStatus) ? 'h-0.5 bg-accent' : 'h-0'
     ]}
   ></div>
 
@@ -58,7 +61,7 @@
     draggable="true"
     ondragstart={(e) => backlogDrag.startDrag(e, bean)}
     ondragend={() => backlogDrag.endDrag()}
-    ondragover={(e) => backlogDrag.hoverCard(e, parentId, index, bean.id)}
+    ondragover={(e) => backlogDrag.hoverCard(e, parentId, index, bean.id, sectionStatus)}
     onclick={handleClick}
   >
     <BeanCard
@@ -86,6 +89,7 @@
           {selectedId}
           {onSelect}
           {filterText}
+          {sectionStatus}
         />
       {/each}
 
