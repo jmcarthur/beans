@@ -137,6 +137,7 @@ func runServer(port int, origins []string) error {
 		var sb strings.Builder
 		sb.WriteString("IMPORTANT: Do NOT use Claude Code's built-in worktree system (EnterWorktree tool). You are already working inside a beans-managed worktree.\n\n")
 		sb.WriteString("IMPORTANT: When you have questions for the user, ALWAYS use the AskUserQuestion tool instead of asking as plain text. This ensures your questions are surfaced properly in the UI.\n\n")
+		sb.WriteString("IMPORTANT: You MUST only create or modify files within this worktree directory. NEVER make changes to files in the main repository or any other worktree. All your file operations (reads are fine anywhere, but writes, edits, and deletions) must be scoped to your current working directory.\n\n")
 		fmt.Fprintf(&sb, "You are working on bean %s: %q\n", b.ID, b.Title)
 		fmt.Fprintf(&sb, "Type: %s | Status: %s", b.Type, b.Status)
 		if b.Priority != "" {
