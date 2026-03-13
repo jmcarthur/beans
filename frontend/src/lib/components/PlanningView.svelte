@@ -75,9 +75,7 @@
 
 <div class="flex h-full flex-col">
   <ViewToolbar showAgentToggle agentActive={ui.showPlanningChat} onToggleAgent={() => ui.togglePlanningChat()}>
-    <button class="btn-primary" onclick={() => ui.openCreateForm()}>+ New Bean</button>
-
-    <div class="ml-3 flex">
+    <div class="flex">
       <button
         onclick={() => ui.navigateToPlanningView('backlog')}
         class={[
@@ -101,6 +99,7 @@
       <FilterInput bind:this={filterInput} />
     </div>
     {#snippet right()}
+      <button class="btn-primary mr-3" onclick={() => ui.openCreateForm()}>+ New Bean</button>
       <AgentActions beanId={CENTRAL_SESSION_ID} {agentBusy} />
     {/snippet}
   </ViewToolbar>
