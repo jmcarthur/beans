@@ -67,7 +67,7 @@ func GenerateDescription(messages []Message) string {
 
 	// Pass prompt via stdin (not as CLI arg) to avoid leaking conversation
 	// content into `ps` output and to avoid OS argument length limits.
-	cmd := exec.CommandContext(ctx, "claude", "--print", "-m", "haiku")
+	cmd := exec.CommandContext(ctx, "claude", "--print", "--model", "haiku")
 	cmd.Env = buildClaudeEnv()
 	cmd.Stdin = strings.NewReader(prompt)
 
