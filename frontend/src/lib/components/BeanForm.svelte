@@ -142,8 +142,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<dialog class="open fixed inset-0 z-50 flex items-center justify-center bg-black/50" open>
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
   <div class="w-11/12 max-w-2xl rounded-xl bg-surface p-6 shadow-xl">
     <h3 class="text-lg font-bold text-text">{isEdit ? 'Edit Bean' : 'New Bean'}</h3>
 
@@ -287,4 +286,4 @@
   </div>
   <!-- Backdrop -->
   <button class="fixed inset-0 -z-10" onclick={onClose} tabindex="-1" aria-label="Close"></button>
-</dialog>
+</div>
