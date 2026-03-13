@@ -1,21 +1,22 @@
 import { test, expect } from './fixtures';
 
 test.describe('Backlog sorting', () => {
-  test('beans are sorted by status, then priority, then type, then title', async ({
+  test('beans are sorted by priority, then type, then title within each section', async ({
     beans,
     backlogPage
   }) => {
     beans.create('Todo Normal Task', { status: 'todo', priority: 'normal', type: 'task' });
-    beans.create('In Progress Bug', { status: 'in-progress', priority: 'normal', type: 'bug' });
+    beans.create('Todo Normal Bug', { status: 'todo', priority: 'normal', type: 'bug' });
     beans.create('Todo High Feature', { status: 'todo', priority: 'high', type: 'feature' });
     beans.create('Draft Idea', { status: 'draft', priority: 'low', type: 'task' });
 
     await backlogPage.goto(4);
 
     const titles = await backlogPage.getBeanTitles();
+    // Todo section first (sorted by priority, then type, then title), then Draft section
     expect(titles).toEqual([
-      'In Progress Bug',
       'Todo High Feature',
+      'Todo Normal Bug',
       'Todo Normal Task',
       'Draft Idea'
     ]);
@@ -45,21 +46,22 @@ test.describe('Backlog sorting', () => {
   });
 
   test('list re-sorts when a bean status changes on disk', async ({ beans, backlogPage }) => {
-    const id1 = beans.create('A Todo Bean', { status: 'todo', type: 'task' });
-    beans.create('B In Progress Bean', { status: 'in-progress', type: 'task' });
+    const id1 = beans.create('A Draft Bean', { status: 'draft', type: 'task' });
+    beans.create('B Todo Bean', { status: 'todo', type: 'task' });
 
     await backlogPage.goto(2);
 
+    // Todo section comes before Draft section
     let titles = await backlogPage.getBeanTitles();
-    expect(titles).toEqual(['B In Progress Bean', 'A Todo Bean']);
+    expect(titles).toEqual(['B Todo Bean', 'A Draft Bean']);
 
-    // Move the todo bean to in-progress
-    beans.update(id1, { status: 'in-progress' });
+    // Move the draft bean to todo
+    beans.update(id1, { status: 'todo' });
 
-    // Both are now in-progress, should sort by title
+    // Both are now todo, should sort by title
     await expect(async () => {
       titles = await backlogPage.getBeanTitles();
-      expect(titles).toEqual(['A Todo Bean', 'B In Progress Bean']);
+      expect(titles).toEqual(['A Draft Bean', 'B Todo Bean']);
     }).toPass({ timeout: 5_000 });
   });
 

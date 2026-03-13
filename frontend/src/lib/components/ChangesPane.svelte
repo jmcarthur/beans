@@ -97,7 +97,7 @@
   });
 
   // When switching tabs, clear the diff selection
-  let prevTab = $state<Tab>(activeTab);
+  let prevTab: Tab = 'all';
   $effect(() => {
     if (activeTab !== prevTab) {
       prevTab = activeTab;

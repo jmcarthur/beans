@@ -119,7 +119,7 @@
                   {#each msg.images as img}
                     <img
                       src={img.url}
-                      alt="Attached image"
+                      alt="Attachment"
                       class="max-h-48 max-w-xs rounded border border-border"
                     />
                   {/each}

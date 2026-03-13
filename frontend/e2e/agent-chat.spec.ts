@@ -5,7 +5,7 @@ import { agentSession } from './agent-session';
 
 test.describe('Agent chat', () => {
   test('Clear button resets the conversation in the UI', async ({ page, beans }) => {
-    await agentSession('__central__', beans)
+    await agentSession('__main__', beans)
       .withMessages([
         { role: 'user', content: 'hello agent' },
         { role: 'assistant', content: 'Hi! How can I help?' }
@@ -45,12 +45,12 @@ test.describe('Agent chat', () => {
     const imageId = 'test-image.png';
 
     // Write the image file to the attachments directory
-    const attachDir = join(beans.beansPath, '.conversations', 'attachments', '__central__');
+    const attachDir = join(beans.beansPath, '.conversations', 'attachments', '__main__');
     mkdirSync(attachDir, { recursive: true });
     writeFileSync(join(attachDir, imageId), pngData);
 
     // Seed a conversation with an image reference
-    await agentSession('__central__', beans)
+    await agentSession('__main__', beans)
       .withMessages([
         {
           role: 'user',
@@ -65,11 +65,11 @@ test.describe('Agent chat', () => {
     await expect(page.locator('text=Check this screenshot')).toBeVisible({ timeout: 5000 });
 
     // Verify the image is rendered inline
-    const img = page.locator('img[alt="Attached image"]');
+    const img = page.locator('img[alt="Attachment"]');
     await expect(img).toBeVisible({ timeout: 5000 });
 
     // Verify the image src points to the attachment endpoint
     const src = await img.getAttribute('src');
-    expect(src).toContain('/api/attachments/__central__/test-image.png');
+    expect(src).toContain('/api/attachments/__main__/test-image.png');
   });
 });

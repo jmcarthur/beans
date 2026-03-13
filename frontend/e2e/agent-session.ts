@@ -100,9 +100,8 @@ class AgentSessionBuilder {
       writeFileSync(join(convDir, `${this.beanId}.jsonl`), lines.join('\n') + '\n');
     }
 
-    // 2. Navigate and open the chat panel
-    await page.goto(this.baseURL + '/');
-    await page.click('button[title="Show chat"]');
+    // 2. Navigate to the main workspace (agent chat is always visible there)
+    await page.goto(this.baseURL + '/workspace/__main__');
 
     // Wait for messages to load if we seeded any
     if (this.messages.length > 0) {

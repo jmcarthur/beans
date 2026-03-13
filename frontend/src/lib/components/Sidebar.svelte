@@ -137,6 +137,13 @@
                     e.stopPropagation();
                     confirmingRemoveId = item.id;
                   }}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      confirmingRemoveId = item.id;
+                    }
+                  }}
                   class="absolute inset-0 flex cursor-pointer items-center justify-center rounded text-text-faint opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
                   aria-label="Destroy worktree"
                 >

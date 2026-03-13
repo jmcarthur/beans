@@ -2,7 +2,6 @@ import { test, expect } from './fixtures';
 
 test.describe('Board sorting', () => {
   test('beans appear in the correct column by status', async ({ beans, boardPage }) => {
-    beans.create('Draft Bean', { status: 'draft', type: 'task' });
     beans.create('Todo Bean', { status: 'todo', type: 'task' });
     beans.create('Active Bean', { status: 'in-progress', type: 'task' });
     beans.create('Done Bean', { status: 'completed', type: 'task' });
@@ -10,12 +9,10 @@ test.describe('Board sorting', () => {
     await boardPage.goto();
 
     // Wait for all beans to appear in their columns
-    await boardPage.waitForBeanInColumn('Draft Bean', 'draft');
     await boardPage.waitForBeanInColumn('Todo Bean', 'todo');
     await boardPage.waitForBeanInColumn('Active Bean', 'in-progress');
     await boardPage.waitForBeanInColumn('Done Bean', 'completed');
 
-    expect(await boardPage.getColumnTitles('draft')).toEqual(['Draft Bean']);
     expect(await boardPage.getColumnTitles('todo')).toEqual(['Todo Bean']);
     expect(await boardPage.getColumnTitles('in-progress')).toEqual(['Active Bean']);
     expect(await boardPage.getColumnTitles('completed')).toEqual(['Done Bean']);

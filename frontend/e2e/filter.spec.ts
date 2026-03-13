@@ -4,7 +4,7 @@ test.describe('Filter', () => {
   test('filters beans by title in backlog view', async ({ beans, backlogPage, page }) => {
     beans.create('Authentication Feature', { status: 'todo', type: 'feature' });
     beans.create('Database Migration', { status: 'todo', type: 'task' });
-    beans.create('Auth Bug Fix', { status: 'in-progress', type: 'bug' });
+    beans.create('Auth Bug Fix', { status: 'todo', type: 'bug' });
 
     await backlogPage.goto(3);
 
@@ -88,7 +88,7 @@ test.describe('Filter', () => {
     const filterInput = page.getByTestId('filter-input');
     await filterInput.fill('zzzznonexistent');
 
-    await expect(page.getByText('No matching beans')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('No beans').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test('filters beans in board view', async ({ beans, boardPage, page }) => {
