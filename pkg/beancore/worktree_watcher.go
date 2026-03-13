@@ -77,11 +77,47 @@ func (c *Core) WatchWorktreeBeans(worktreePath string) error {
 		return nil
 	})
 
+	// Initial scan: load existing bean files from the worktree into runtime state.
+	// Without this, beans created in worktrees won't be resolvable via Get()
+	// until the watcher picks up a change event.
+	c.loadWorktreeBeansInitial(wt)
+
 	// Start the watcher goroutine
 	go c.worktreeWatchLoop(wt, watcher)
 
 	c.logWarn("watching worktree beans: %s", beansDir)
 	return nil
+}
+
+// loadWorktreeBeansInitial scans a worktree's .beans/ directory and loads
+// all existing bean files into the runtime state as dirty.
+func (c *Core) loadWorktreeBeansInitial(wt *worktreeWatcher) {
+	entries, err := os.ReadDir(wt.beansDir)
+	if err != nil {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		path := filepath.Join(wt.beansDir, entry.Name())
+		newBean, err := c.loadBeanFrom(path, wt.beansDir)
+		if err != nil {
+			continue
+		}
+
+		c.beans[newBean.ID] = newBean
+		c.dirty[newBean.ID] = true
+
+		if c.searchIndex != nil {
+			_ = c.searchIndex.IndexBean(newBean)
+		}
+	}
 }
 
 // UnwatchWorktreeBeans stops watching a worktree's .beans/ directory.
