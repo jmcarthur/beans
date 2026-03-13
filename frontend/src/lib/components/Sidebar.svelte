@@ -165,7 +165,7 @@
           </button>
 
           {#if item.beans.length > 0}
-            <div class="flex flex-col gap-0.5 px-2 pb-2">
+            <div class="flex flex-col gap-0.5 px-3 pb-2">
               {#each item.beans as wtBean (wtBean.id)}
                 <button
                   onclick={() => {
