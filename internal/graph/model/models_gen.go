@@ -27,6 +27,10 @@ type AgentAction struct {
 	Label string `json:"label"`
 	// Description of what the action does
 	Description *string `json:"description,omitempty"`
+	// Whether the action is currently disabled
+	Disabled bool `json:"disabled"`
+	// Reason why the action is disabled (shown as tooltip)
+	DisabledReason *string `json:"disabledReason,omitempty"`
 }
 
 // A single message in an agent conversation

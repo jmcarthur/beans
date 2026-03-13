@@ -650,4 +650,8 @@ type AgentAction {
   label: String!
   "Description of what the action does"
   description: String
+  "Whether the action is currently disabled"
+  disabled: Boolean!
+  "Reason why the action is disabled (shown as tooltip)"
+  disabledReason: String
 }

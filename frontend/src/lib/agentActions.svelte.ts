@@ -5,6 +5,8 @@ export interface AgentAction {
   id: string;
   label: string;
   description: string | null;
+  disabled: boolean;
+  disabledReason: string | null;
 }
 
 const AGENT_ACTIONS_QUERY = gql`
@@ -13,6 +15,8 @@ const AGENT_ACTIONS_QUERY = gql`
       id
       label
       description
+      disabled
+      disabledReason
     }
   }
 `;

@@ -951,6 +951,8 @@ func (r *queryResolver) AgentActions(ctx context.Context, beanID string) ([]*mod
 
 	// Check if this worktree exists and gather its state
 	if r.WorktreeMgr != nil {
+		actCtx.MainRepoHasChanges = gitutil.HasChanges(r.WorktreeMgr.RepoRoot())
+
 		if wts, err := r.WorktreeMgr.List(); err == nil {
 			for _, wt := range wts {
 				if wt.ID == beanID {
@@ -969,11 +971,18 @@ func (r *queryResolver) AgentActions(ctx context.Context, beanID string) ([]*mod
 			continue
 		}
 		desc := a.Description
-		result = append(result, &model.AgentAction{
+		action := &model.AgentAction{
 			ID:          a.ID,
 			Label:       a.Label,
 			Description: &desc,
-		})
+		}
+		if a.Disabled != nil {
+			if reason := a.Disabled(actCtx); reason != "" {
+				action.Disabled = true
+				action.DisabledReason = &reason
+			}
+		}
+		result = append(result, action)
 	}
 	return result, nil
 }

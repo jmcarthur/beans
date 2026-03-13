@@ -48,6 +48,11 @@ func NewManager(repoRoot, beansDir, baseRef string) *Manager {
 	return &Manager{repoRoot: repoRoot, beansDir: beansDir, baseRef: baseRef}
 }
 
+// RepoRoot returns the path to the main repository root.
+func (m *Manager) RepoRoot() string {
+	return m.repoRoot
+}
+
 // BaseRef returns the configured base ref for worktree branches.
 func (m *Manager) BaseRef() string {
 	return m.baseRef

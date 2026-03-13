@@ -57,9 +57,11 @@ type ComplexityRoot struct {
 	}
 
 	AgentAction struct {
-		Description func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Label       func(childComplexity int) int
+		Description    func(childComplexity int) int
+		Disabled       func(childComplexity int) int
+		DisabledReason func(childComplexity int) int
+		ID             func(childComplexity int) int
+		Label          func(childComplexity int) int
 	}
 
 	AgentMessage struct {
@@ -306,6 +308,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.AgentAction.Description(childComplexity), true
+	case "AgentAction.disabled":
+		if e.complexity.AgentAction.Disabled == nil {
+			break
+		}
+
+		return e.complexity.AgentAction.Disabled(childComplexity), true
+	case "AgentAction.disabledReason":
+		if e.complexity.AgentAction.DisabledReason == nil {
+			break
+		}
+
+		return e.complexity.AgentAction.DisabledReason(childComplexity), true
 	case "AgentAction.id":
 		if e.complexity.AgentAction.ID == nil {
 			break
@@ -1929,6 +1943,64 @@ func (ec *executionContext) _AgentAction_description(ctx context.Context, field 
 }
 
 func (ec *executionContext) fieldContext_AgentAction_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentAction",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AgentAction_disabled(ctx context.Context, field graphql.CollectedField, obj *model.AgentAction) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AgentAction_disabled,
+		func(ctx context.Context) (any, error) {
+			return obj.Disabled, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_AgentAction_disabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AgentAction",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _AgentAction_disabledReason(ctx context.Context, field graphql.CollectedField, obj *model.AgentAction) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_AgentAction_disabledReason,
+		func(ctx context.Context) (any, error) {
+			return obj.DisabledReason, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_AgentAction_disabledReason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "AgentAction",
 		Field:      field,
@@ -5748,6 +5820,10 @@ func (ec *executionContext) fieldContext_Query_agentActions(ctx context.Context,
 				return ec.fieldContext_AgentAction_label(ctx, field)
 			case "description":
 				return ec.fieldContext_AgentAction_description(ctx, field)
+			case "disabled":
+				return ec.fieldContext_AgentAction_disabled(ctx, field)
+			case "disabledReason":
+				return ec.fieldContext_AgentAction_disabledReason(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AgentAction", field.Name)
 		},
@@ -8514,6 +8590,13 @@ func (ec *executionContext) _AgentAction(ctx context.Context, sel ast.SelectionS
 			}
 		case "description":
 			out.Values[i] = ec._AgentAction_description(ctx, field, obj)
+		case "disabled":
+			out.Values[i] = ec._AgentAction_disabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "disabledReason":
+			out.Values[i] = ec._AgentAction_disabledReason(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

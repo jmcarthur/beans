@@ -2887,6 +2887,30 @@ func TestConditionalActionVisibility(t *testing.T) {
 	}
 }
 
+func TestIntegrateActionDisabledWhenMainHasChanges(t *testing.T) {
+	action := findAgentAction("integrate")
+	if action == nil {
+		t.Fatal("integrate action not found")
+	}
+	if action.Disabled == nil {
+		t.Fatal("integrate action should have a Disabled function")
+	}
+
+	t.Run("enabled when main repo is clean", func(t *testing.T) {
+		reason := action.Disabled(actionContext{HasChanges: true})
+		if reason != "" {
+			t.Errorf("Disabled() = %q, want empty", reason)
+		}
+	})
+
+	t.Run("disabled when main repo has changes", func(t *testing.T) {
+		reason := action.Disabled(actionContext{HasChanges: true, MainRepoHasChanges: true})
+		if reason == "" {
+			t.Error("Disabled() = empty, want a reason string")
+		}
+	})
+}
+
 func TestExecuteAgentAction(t *testing.T) {
 	t.Run("nil agent manager", func(t *testing.T) {
 		resolver, _ := setupTestResolver(t)

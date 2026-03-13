@@ -145,10 +145,11 @@ func activeAgentsToModel(agents []agent.ActiveAgent) []*model.ActiveAgentStatus 
 
 // actionContext provides context for action visibility filtering and prompt generation.
 type actionContext struct {
-	WorktreeID    string
-	WorkDir       string // working directory (worktree path or project root)
-	HasChanges    bool   // uncommitted changes or untracked files
-	HasNewCommits bool   // commits ahead of the base branch
+	WorktreeID         string
+	WorkDir            string // working directory (worktree path or project root)
+	HasChanges         bool   // uncommitted changes or untracked files
+	HasNewCommits      bool   // commits ahead of the base branch
+	MainRepoHasChanges bool   // main repo has uncommitted changes
 }
 
 // agentActionDef defines a single agent action with its metadata and prompt.
@@ -157,9 +158,12 @@ type agentActionDef struct {
 	Label       string
 	Description string
 	// PromptFunc generates the prompt from the full action context.
-	PromptFunc  func(ctx actionContext) string
+	PromptFunc func(ctx actionContext) string
 	// Visible determines whether this action should appear. If nil, always visible.
-	Visible     func(ctx actionContext) bool
+	Visible func(ctx actionContext) bool
+	// Disabled returns a reason string if the action should be shown but not executable.
+	// If nil or returns "", the action is enabled.
+	Disabled func(ctx actionContext) string
 }
 
 // agentActions is the single registry of all available agent actions.
@@ -219,6 +223,12 @@ var agentActions = []agentActionDef{
 		},
 		Visible: func(ctx actionContext) bool {
 			return ctx.HasChanges || ctx.HasNewCommits
+		},
+		Disabled: func(ctx actionContext) string {
+			if ctx.MainRepoHasChanges {
+				return "Main workspace has uncommitted changes"
+			}
+			return ""
 		},
 	},
 }

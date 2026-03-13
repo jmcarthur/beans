@@ -26,8 +26,8 @@
 {#each store.actions as action (action.id)}
   <button
     class="btn-toggle btn-toggle-inactive ml-1"
-    disabled={agentBusy || !!store.executingAction}
-    title={action.description ?? undefined}
+    disabled={agentBusy || !!store.executingAction || action.disabled}
+    title={action.disabled ? (action.disabledReason ?? undefined) : (action.description ?? undefined)}
     onclick={() => store.execute(beanId, action.id)}
   >
     {action.label}
