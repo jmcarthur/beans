@@ -15,6 +15,7 @@
   import TerminalPane from './TerminalPane.svelte';
   import ViewToolbar from './ViewToolbar.svelte';
   import AgentActions from './AgentActions.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   const WRITE_TERMINAL_INPUT = gql`
     mutation WriteTerminalInput($sessionId: String!, $data: String!) {
@@ -59,6 +60,16 @@
   });
 
   const agentBusy = $derived(agentStore.session?.status === 'RUNNING');
+
+  const hasNoChanges = $derived(changesStore.allChanges.length === 0);
+  const isWorktree = $derived(worktreeId !== MAIN_WORKSPACE_ID);
+  let confirmingDestroy = $state(false);
+
+  async function handleDestroy() {
+    confirmingDestroy = false;
+    ui.navigateTo('planning');
+    await worktreeStore.removeWorktree(worktreeId);
+  }
 
   const worktree = $derived(
     worktreeId === MAIN_WORKSPACE_ID
@@ -123,6 +134,15 @@
     {/if}
     {#snippet right()}
       <AgentActions beanId={worktreeId} {agentBusy} />
+      {#if isWorktree && hasNoChanges}
+        <button
+          class="btn-toggle ml-2 cursor-pointer text-red-400 hover:text-red-300"
+          title="Destroy this worktree"
+          onclick={() => (confirmingDestroy = true)}
+        >
+          <span class="iconify lucide--trash-2 size-4"></span>
+        </button>
+      {/if}
     {/snippet}
   </ViewToolbar>
 
@@ -136,3 +156,15 @@
     />
   </div>
 </div>
+
+{#if confirmingDestroy}
+  {@const label = worktree?.name ?? worktreeId}
+  <ConfirmModal
+    title="Destroy Worktree"
+    message={`Are you sure you want to destroy the worktree for "${label}"? This cannot be undone.`}
+    confirmLabel="Destroy"
+    danger
+    onConfirm={handleDestroy}
+    onCancel={() => (confirmingDestroy = false)}
+  />
+{/if}
