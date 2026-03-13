@@ -98,8 +98,8 @@
     <div class="mx-3 w-60">
       <FilterInput bind:this={filterInput} />
     </div>
+    <button class="btn-primary" onclick={() => ui.openCreateForm()}>+ New Bean</button>
     {#snippet right()}
-      <button class="btn-primary mr-3" onclick={() => ui.openCreateForm()}>+ New Bean</button>
       <AgentActions beanId={CENTRAL_SESSION_ID} {agentBusy} />
     {/snippet}
   </ViewToolbar>
