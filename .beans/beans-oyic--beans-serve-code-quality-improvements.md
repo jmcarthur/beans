@@ -1,11 +1,12 @@
 ---
 # beans-oyic
 title: beans-serve code quality improvements
-status: completed
+status: todo
 type: epic
 priority: normal
 created_at: 2026-03-13T17:48:53Z
-updated_at: 2026-03-13T18:52:36Z
+updated_at: 2026-03-13T18:54:26Z
+order: V
 ---
 
 Improvements identified during comprehensive code review of both backend and frontend.
