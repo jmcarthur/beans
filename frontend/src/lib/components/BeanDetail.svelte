@@ -72,21 +72,21 @@
     archiving = false;
   }
 
-  type WorkflowAction = { label: string; status: string; color: string };
+  type WorkflowAction = { label: string; status: string; icon: string; iconColor: string };
 
   const workflowActions = $derived.by((): WorkflowAction[] => {
     switch (bean.status) {
       case 'draft':
         return [
-          { label: 'Todo', status: 'todo', color: 'bg-sky-600' },
-          { label: 'Scrap', status: 'scrapped', color: 'bg-danger' }
+          { label: 'Todo', status: 'todo', icon: 'icon-[uil--clipboard-notes]', iconColor: 'text-sky-400' },
+          { label: 'Scrap', status: 'scrapped', icon: 'icon-[uil--trash-alt]', iconColor: 'text-danger' }
         ];
       case 'todo':
-        return [{ label: 'Scrap', status: 'scrapped', color: 'bg-danger' }];
+        return [{ label: 'Scrap', status: 'scrapped', icon: 'icon-[uil--trash-alt]', iconColor: 'text-danger' }];
       case 'in-progress':
         return [
-          { label: 'Complete', status: 'completed', color: 'bg-success' },
-          { label: 'Scrap', status: 'scrapped', color: 'bg-danger' }
+          { label: 'Complete', status: 'completed', icon: 'icon-[uil--check-circle]', iconColor: 'text-success' },
+          { label: 'Scrap', status: 'scrapped', icon: 'icon-[uil--trash-alt]', iconColor: 'text-danger' }
         ];
       default:
         return [];
@@ -187,47 +187,50 @@
       <!-- Workflow action buttons -->
       {#if canStartWork && bean.status === 'todo'}
         <button
-          class="cursor-pointer flex items-center gap-2 rounded-md bg-success px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          class="btn-toggle btn-toggle-inactive"
           onclick={startWork}
           disabled={startingWork}
         >
           {#if startingWork}
             <span
-              class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+              class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current"
             ></span>
+          {:else}
+            <span class="icon-[uil--play-circle] size-4 text-success"></span>
           {/if}
           Start Work
         </button>
       {/if}
       {#each workflowActions as action}
         <button
-          class={[
-            'cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50',
-            action.color
-          ]}
+          class="btn-toggle btn-toggle-inactive"
           onclick={() => updateStatus(action.status)}
           disabled={updatingStatus}
         >
+          <span class={[action.icon, 'size-4', action.iconColor]}></span>
           {action.label}
         </button>
       {/each}
 
       {#if isArchivable}
         <button
-          class="cursor-pointer flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt disabled:opacity-50"
+          class="btn-toggle btn-toggle-inactive"
           onclick={archiveBean}
           disabled={archiving}
           title="Archive this bean"
         >
-          <span class="icon-[uil--archive] size-4"></span>
+          <span class="icon-[uil--archive] size-4 text-amber-400"></span>
           {archiving ? 'Archiving…' : 'Archive'}
         </button>
       {/if}
       {#if onEdit}
         <button
-          class="cursor-pointer rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt"
-          onclick={() => onEdit(bean)}>Edit</button
+          class="btn-toggle btn-toggle-inactive"
+          onclick={() => onEdit(bean)}
         >
+          <span class="icon-[uil--edit] size-4 text-sky-400"></span>
+          Edit
+        </button>
       {/if}
     </div>
   </div>
