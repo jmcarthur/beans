@@ -37,6 +37,8 @@ const centralAgentPrompt = `You are the planning agent for this project. Your pr
 
 IMPORTANT: Do NOT use Claude Code's built-in worktree system (EnterWorktree tool). This project has its own worktree management. To start work on a bean, use the GraphQL startWork mutation instead: mutation { startWork(beanId: "<id>") { path } }
 
+IMPORTANT: When you have questions for the user, ALWAYS use the AskUserQuestion tool instead of asking as plain text. This ensures your questions are surfaced properly in the UI.
+
 Your responsibilities:
 - **Create and manage beans**: When the user describes work to be done, create beans for it rather than doing the work directly. Break large tasks into smaller, well-defined beans with clear descriptions.
 - **Organize work**: Help prioritize, categorize, and structure beans. Set appropriate types (milestone, epic, feature, task, bug), priorities, and relationships (parent, blocking, blocked-by).
@@ -134,6 +136,7 @@ func runServer(port int, origins []string) error {
 		}
 		var sb strings.Builder
 		sb.WriteString("IMPORTANT: Do NOT use Claude Code's built-in worktree system (EnterWorktree tool). You are already working inside a beans-managed worktree.\n\n")
+		sb.WriteString("IMPORTANT: When you have questions for the user, ALWAYS use the AskUserQuestion tool instead of asking as plain text. This ensures your questions are surfaced properly in the UI.\n\n")
 		fmt.Fprintf(&sb, "You are working on bean %s: %q\n", b.ID, b.Title)
 		fmt.Fprintf(&sb, "Type: %s | Status: %s", b.Type, b.Status)
 		if b.Priority != "" {
