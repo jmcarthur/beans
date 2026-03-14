@@ -617,6 +617,125 @@ func TestCreateNoSetupCommand(t *testing.T) {
 	}
 }
 
+func TestTouchLastActive(t *testing.T) {
+	repoDir, beansDir := initTestRepo(t)
+	mgr := NewManager(repoDir, beansDir, "", "")
+
+	// Create a worktree
+	wt, err := mgr.Create("touch-test")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Subscribe to get notified
+	ch := mgr.Subscribe()
+	defer mgr.Unsubscribe(ch)
+
+	// Touch the last active timestamp
+	if err := mgr.TouchLastActive(wt.ID); err != nil {
+		t.Fatalf("TouchLastActive: %v", err)
+	}
+
+	// Should have notified subscribers
+	select {
+	case <-ch:
+	default:
+		t.Error("expected notification after TouchLastActive")
+	}
+
+	// List should return the updated timestamp
+	wts, err := mgr.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("expected 1 worktree, got %d", len(wts))
+	}
+	if wts[0].LastActiveAt.IsZero() {
+		t.Error("expected LastActiveAt to be set after TouchLastActive")
+	}
+
+	// The name should still be preserved
+	if wts[0].Name != "touch-test" {
+		t.Errorf("Name = %q, want %q", wts[0].Name, "touch-test")
+	}
+}
+
+func TestListSortsByLastActiveAt(t *testing.T) {
+	repoDir, beansDir := initTestRepo(t)
+	mgr := NewManager(repoDir, beansDir, "", "")
+
+	// Create three worktrees
+	_, err := mgr.Create("wt-alpha")
+	if err != nil {
+		t.Fatalf("Create alpha: %v", err)
+	}
+	_, err = mgr.Create("wt-beta")
+	if err != nil {
+		t.Fatalf("Create beta: %v", err)
+	}
+	_, err = mgr.Create("wt-gamma")
+	if err != nil {
+		t.Fatalf("Create gamma: %v", err)
+	}
+
+	// Touch them in a specific order: beta first, then gamma, then alpha
+	// (with small delays to ensure distinct timestamps)
+	time.Sleep(10 * time.Millisecond)
+	if err := mgr.TouchLastActive("wt-beta"); err != nil {
+		t.Fatalf("TouchLastActive beta: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if err := mgr.TouchLastActive("wt-gamma"); err != nil {
+		t.Fatalf("TouchLastActive gamma: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if err := mgr.TouchLastActive("wt-alpha"); err != nil {
+		t.Fatalf("TouchLastActive alpha: %v", err)
+	}
+
+	// List should be sorted: alpha (most recent), gamma, beta
+	wts, err := mgr.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(wts) != 3 {
+		t.Fatalf("expected 3 worktrees, got %d", len(wts))
+	}
+
+	if wts[0].ID != "wt-alpha" {
+		t.Errorf("wts[0].ID = %q, want %q (most recently active)", wts[0].ID, "wt-alpha")
+	}
+	if wts[1].ID != "wt-gamma" {
+		t.Errorf("wts[1].ID = %q, want %q", wts[1].ID, "wt-gamma")
+	}
+	if wts[2].ID != "wt-beta" {
+		t.Errorf("wts[2].ID = %q, want %q (least recently active)", wts[2].ID, "wt-beta")
+	}
+}
+
+func TestCreateSetsLastActiveAt(t *testing.T) {
+	repoDir, beansDir := initTestRepo(t)
+	mgr := NewManager(repoDir, beansDir, "", "")
+
+	before := time.Now().UTC().Add(-time.Second)
+	_, err := mgr.Create("new-wt")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	wts, err := mgr.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("expected 1 worktree, got %d", len(wts))
+	}
+	if wts[0].LastActiveAt.Before(before) {
+		t.Errorf("expected LastActiveAt >= %v, got %v", before, wts[0].LastActiveAt)
+	}
+}
+
 // gitRun runs a git command in the given directory, failing the test on error.
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()

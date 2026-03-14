@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hmans/beans/internal/gitutil"
 	"github.com/hmans/beans/pkg/bean"
@@ -31,14 +32,15 @@ const (
 
 // Worktree represents a git worktree.
 type Worktree struct {
-	ID          string
-	Branch      string
-	Path        string
-	Name        string      // Human-readable name
-	Description string      // Auto-generated summary of what this workspace is doing
-	BeanIDs     []string    // Bean IDs detected from changes vs base branch
-	Setup       SetupStatus // post-creation setup status (runtime only)
-	SetupError  string      // error message if setup failed
+	ID           string
+	Branch       string
+	Path         string
+	Name         string      // Human-readable name
+	Description  string      // Auto-generated summary of what this workspace is doing
+	BeanIDs      []string    // Bean IDs detected from changes vs base branch
+	Setup        SetupStatus // post-creation setup status (runtime only)
+	SetupError   string      // error message if setup failed
+	LastActiveAt time.Time   // When an agent last completed a turn in this worktree
 }
 
 // SetupDoneFunc is called when a worktree's setup command finishes.
@@ -154,6 +156,9 @@ func (m *Manager) List() ([]Worktree, error) {
 		if meta := m.loadMeta(worktrees[i].ID); meta != nil {
 			worktrees[i].Name = meta.Name
 			worktrees[i].Description = meta.Description
+			if meta.LastActiveAt != nil {
+				worktrees[i].LastActiveAt = *meta.LastActiveAt
+			}
 		}
 		worktrees[i].BeanIDs = m.DetectBeanIDs(worktrees[i].Path)
 		// Attach runtime setup status
@@ -162,6 +167,22 @@ func (m *Manager) List() ([]Worktree, error) {
 			worktrees[i].SetupError = st.err
 		}
 	}
+
+	// Sort by LastActiveAt descending (most recently active first).
+	// Worktrees with no activity sort to the end.
+	sort.SliceStable(worktrees, func(i, j int) bool {
+		ti, tj := worktrees[i].LastActiveAt, worktrees[j].LastActiveAt
+		if ti.IsZero() && tj.IsZero() {
+			return false
+		}
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.After(tj)
+	})
 
 	return worktrees, nil
 }
@@ -293,8 +314,10 @@ func (m *Manager) Create(name string) (*Worktree, error) {
 		return nil, fmt.Errorf("git worktree add: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 
-	// Save the name metadata
-	if err := m.saveMeta(id, &worktreeMeta{Name: name}); err != nil {
+	// Save the name metadata with initial LastActiveAt so new worktrees
+	// sort to the top (most recently created first)
+	now := time.Now().UTC()
+	if err := m.saveMeta(id, &worktreeMeta{Name: name, LastActiveAt: &now}); err != nil {
 		log.Printf("[worktree] warning: failed to save metadata for %s: %v", id, err)
 	}
 
@@ -342,8 +365,9 @@ func (m *Manager) Create(name string) (*Worktree, error) {
 
 // worktreeMeta is the metadata stored alongside standalone worktrees.
 type worktreeMeta struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
+	Name         string     `json:"name"`
+	Description  string     `json:"description,omitempty"`
+	LastActiveAt *time.Time `json:"last_active_at,omitempty"`
 }
 
 // metaPath returns the path to the metadata file for a worktree ID.
@@ -378,6 +402,25 @@ func (m *Manager) removeMeta(id string) {
 	os.Remove(m.metaPath(id))
 }
 
+
+// TouchLastActive updates the LastActiveAt timestamp for a worktree to now
+// and notifies subscribers. Called when an agent completes a turn.
+func (m *Manager) TouchLastActive(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	meta := m.loadMeta(id)
+	if meta == nil {
+		meta = &worktreeMeta{}
+	}
+	now := time.Now().UTC()
+	meta.LastActiveAt = &now
+	if err := m.saveMeta(id, meta); err != nil {
+		return fmt.Errorf("save last_active_at: %w", err)
+	}
+	m.notify()
+	return nil
+}
 
 // UpdateDescription updates the description for a worktree and notifies subscribers.
 func (m *Manager) UpdateDescription(id, description string) error {

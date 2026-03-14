@@ -534,6 +534,11 @@ func (m *Manager) readOutput(beanID string, stdout io.Reader, workDir string) {
 			m.mu.Unlock()
 			m.notify(beanID)
 
+			// Fire turn complete callback (e.g. to update workspace activity timestamp)
+			if m.onTurnComplete != nil {
+				go m.onTurnComplete(beanID)
+			}
+
 			// After compact, prune orphaned image attachments
 			if m.wasLastUserMessage(beanID, "/compact") {
 				m.pruneOrphanedAttachments(beanID)

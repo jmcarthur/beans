@@ -15,6 +15,10 @@ type ContextProvider func(beanID string) string
 // the user's message text.
 type OnFirstUserMessageFunc func(beanID string, message string)
 
+// OnTurnCompleteFunc is called when an agent finishes a turn (receives a result event).
+// Receives the beanID (which is the worktree ID for workspace agents).
+type OnTurnCompleteFunc func(beanID string)
+
 // DefaultMode controls the initial mode for new agent sessions.
 type DefaultMode string
 
@@ -32,6 +36,7 @@ type Manager struct {
 	store                 *store // JSONL persistence (nil if no beansDir)
 	contextProvider       ContextProvider
 	onFirstUserMessage    OnFirstUserMessageFunc
+	onTurnComplete        OnTurnCompleteFunc
 	defaultMode DefaultMode
 
 	subMu       sync.Mutex
@@ -74,6 +79,12 @@ func NewManager(beansDir string, contextProvider ContextProvider, defaultMode ..
 // is sent to a new session. Must be called during initialization, before any messages are sent.
 func (m *Manager) SetOnFirstUserMessage(fn OnFirstUserMessageFunc) {
 	m.onFirstUserMessage = fn
+}
+
+// SetOnTurnComplete registers a callback that fires when an agent finishes a turn.
+// Used to update workspace activity timestamps for sidebar sorting.
+func (m *Manager) SetOnTurnComplete(fn OnTurnCompleteFunc) {
+	m.onTurnComplete = fn
 }
 
 // GetSession returns a snapshot of the session for the given beanID, or nil.

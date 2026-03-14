@@ -186,6 +186,17 @@ func runServer(port int, origins []string) error {
 		}
 	})
 
+	// Update workspace activity timestamp when an agent completes a turn,
+	// so the sidebar sorts workspaces by most recently active.
+	agentMgr.SetOnTurnComplete(func(beanID string) {
+		if beanID == graph.CentralSessionID || wtManager == nil {
+			return
+		}
+		if err := wtManager.TouchLastActive(beanID); err != nil {
+			log.Printf("[beans] failed to update last_active_at for %s: %v", beanID, err)
+		}
+	})
+
 	// When bean files change in a worktree, also notify the worktree manager
 	// so the worktree subscription re-emits with updated detected bean IDs.
 	if wtManager != nil {
