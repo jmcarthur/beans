@@ -555,7 +555,11 @@ func TestConcurrentAccess(t *testing.T) {
 
 	// Create some initial beans
 	for i := 0; i < 10; i++ {
-		createTestBean(t, core, bean.NewID("", 4), "Initial Bean", "todo")
+		id, err := bean.NewID("", 4)
+		if err != nil {
+			t.Fatalf("NewID error: %v", err)
+		}
+		createTestBean(t, core, id, "Initial Bean", "todo")
 	}
 
 	// Run concurrent operations

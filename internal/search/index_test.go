@@ -6,6 +6,15 @@ import (
 	"github.com/hmans/beans/pkg/bean"
 )
 
+func mustNewID(t *testing.T) string {
+	t.Helper()
+	id, err := bean.NewID("", 4)
+	if err != nil {
+		t.Fatalf("NewID error: %v", err)
+	}
+	return id
+}
+
 func setupTestIndex(t *testing.T) *Index {
 	t.Helper()
 	idx, err := NewIndex()
@@ -348,7 +357,7 @@ func TestSearch_Limit(t *testing.T) {
 	// Index many beans
 	for i := 0; i < 20; i++ {
 		b := &bean.Bean{
-			ID:    bean.NewID("", 4),
+			ID:    mustNewID(t),
 			Title: "Test Bean",
 			Body:  "Content",
 		}

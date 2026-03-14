@@ -225,7 +225,11 @@ func (r *mutationResolver) CreateBean(ctx context.Context, input model.CreateBea
 		if cfg := r.Core.Config(); cfg != nil && cfg.Beans.IDLength > 0 {
 			idLength = cfg.Beans.IDLength
 		}
-		b.ID = bean.NewID(*input.Prefix, idLength)
+		id, err := bean.NewID(*input.Prefix, idLength)
+		if err != nil {
+			return nil, fmt.Errorf("generating bean ID: %w", err)
+		}
+		b.ID = id
 	}
 
 	if err := r.Core.Create(b); err != nil {

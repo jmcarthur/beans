@@ -496,7 +496,11 @@ func (c *Core) Create(b *bean.Bean, opts ...UpdateOption) error {
 				length = c.config.Beans.IDLength
 			}
 		}
-		b.ID = bean.NewID(prefix, length)
+		id, err := bean.NewID(prefix, length)
+		if err != nil {
+			return fmt.Errorf("generating bean ID: %w", err)
+		}
+		b.ID = id
 	}
 
 	// Set timestamps

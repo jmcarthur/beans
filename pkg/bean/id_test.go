@@ -114,14 +114,20 @@ func TestBuildFilename(t *testing.T) {
 
 func TestNewID(t *testing.T) {
 	t.Run("length without prefix", func(t *testing.T) {
-		id := NewID("", 4)
+		id, err := NewID("", 4)
+		if err != nil {
+			t.Fatalf("NewID(\"\", 4) unexpected error: %v", err)
+		}
 		if len(id) != 4 {
 			t.Errorf("NewID(\"\", 4) length = %d, want 4", len(id))
 		}
 	})
 
 	t.Run("length with prefix", func(t *testing.T) {
-		id := NewID("beans-", 4)
+		id, err := NewID("beans-", 4)
+		if err != nil {
+			t.Fatalf("NewID(\"beans-\", 4) unexpected error: %v", err)
+		}
 		if len(id) != 10 { // "beans-" (6) + 4
 			t.Errorf("NewID(\"beans-\", 4) length = %d, want 10", len(id))
 		}
@@ -129,14 +135,20 @@ func TestNewID(t *testing.T) {
 
 	t.Run("prefix preserved", func(t *testing.T) {
 		prefix := "myapp-"
-		id := NewID(prefix, 4)
+		id, err := NewID(prefix, 4)
+		if err != nil {
+			t.Fatalf("NewID(%q, 4) unexpected error: %v", prefix, err)
+		}
 		if !strings.HasPrefix(id, prefix) {
 			t.Errorf("NewID(%q, 4) = %q, should start with prefix", prefix, id)
 		}
 	})
 
 	t.Run("uses valid alphabet", func(t *testing.T) {
-		id := NewID("", 100) // generate long ID to test alphabet
+		id, err := NewID("", 100) // generate long ID to test alphabet
+		if err != nil {
+			t.Fatalf("NewID(\"\", 100) unexpected error: %v", err)
+		}
 		for _, r := range id {
 			if !strings.ContainsRune(idAlphabet, r) {
 				t.Errorf("NewID contains invalid character %q, should only use %q", r, idAlphabet)
@@ -147,7 +159,10 @@ func TestNewID(t *testing.T) {
 	t.Run("generates unique IDs", func(t *testing.T) {
 		seen := make(map[string]bool)
 		for i := 0; i < 100; i++ {
-			id := NewID("", 8)
+			id, err := NewID("", 8)
+			if err != nil {
+				t.Fatalf("NewID(\"\", 8) unexpected error: %v", err)
+			}
 			if seen[id] {
 				t.Errorf("NewID generated duplicate: %q", id)
 			}
@@ -157,7 +172,10 @@ func TestNewID(t *testing.T) {
 
 	t.Run("never contains blocked words", func(t *testing.T) {
 		for i := 0; i < 10000; i++ {
-			id := NewID("", 4)
+			id, err := NewID("", 4)
+			if err != nil {
+				t.Fatalf("NewID(\"\", 4) unexpected error: %v", err)
+			}
 			if containsBlockedWord(id) {
 				t.Errorf("NewID generated ID containing blocked word: %q", id)
 			}

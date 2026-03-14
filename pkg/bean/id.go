@@ -1,6 +1,7 @@
 package bean
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -45,14 +46,14 @@ func containsBlockedWord(id string) bool {
 
 // NewID generates a new NanoID for a bean with an optional prefix and configurable length.
 // It regenerates if the ID contains an offensive word.
-func NewID(prefix string, length int) string {
+func NewID(prefix string, length int) (string, error) {
 	for {
 		id, err := gonanoid.Generate(idAlphabet, length)
 		if err != nil {
-			panic(err) // should never happen with valid alphabet
+			return "", fmt.Errorf("generating nanoid: %w", err)
 		}
 		if !containsBlockedWord(id) {
-			return prefix + id
+			return prefix + id, nil
 		}
 	}
 }
