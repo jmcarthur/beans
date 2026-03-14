@@ -146,6 +146,7 @@
       <div class="flex flex-col gap-1">
       {#each workspaceItems as item (item.id)}
         <div
+          transition:fade={{ duration: 150 }}
           class={[
             'rounded-md border transition-colors',
             ui.activeView === item.id
