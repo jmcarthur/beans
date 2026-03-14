@@ -17,7 +17,7 @@
 
   let { bean, variant = 'list', selected = false, onclick }: Props = $props();
 
-  const linkedWorktreeId = $derived(bean.worktreeId);
+  const linkedWorktreeId = $derived(worktreeStore.worktreeForBean(bean.id));
   const hasWorktree = $derived(variant !== 'compact' && !!linkedWorktreeId);
   const agentRunning = $derived(hasWorktree && linkedWorktreeId != null && agentStatusesStore.isRunning(linkedWorktreeId));
 

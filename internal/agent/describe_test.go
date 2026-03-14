@@ -10,7 +10,7 @@ func TestBuildDescribePrompt(t *testing.T) {
 	prompt := buildDescribePrompt("Fix the auth bug")
 
 	// Should contain the system prompt
-	if !strings.Contains(prompt, "Summarize what this workspace will be doing") {
+	if !strings.Contains(prompt, "Summarize what the user asked for") {
 		t.Error("prompt should contain system instructions")
 	}
 

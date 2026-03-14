@@ -19,9 +19,11 @@
     settingUp: boolean;
   }
 
-  /** Beans linked to a worktree via worktreeId, derived from the bean store. */
-  function beansForWorktree(worktreeId: string): Bean[] {
-    return beansStore.all.filter((b) => b.worktreeId === worktreeId);
+  /** Look up full Bean objects for a worktree's detected bean IDs. */
+  function beansForWorktree(beanIds: string[]): Bean[] {
+    return beanIds
+      .map((id) => beansStore.get(id))
+      .filter((b): b is Bean => b != null);
   }
 
   const mainWorkspace: WorkspaceItem = $derived({ id: MAIN_WORKSPACE_ID, label: configStore.mainBranch, description: null, beans: [], settingUp: false });
@@ -32,7 +34,7 @@
       id: wt.id,
       label: wt.name ?? wt.branch,
       description: wt.description,
-      beans: beansForWorktree(wt.id),
+      beans: beansForWorktree(wt.beanIds),
       settingUp: wt.setupStatus === 'RUNNING'
     }))
   ]);

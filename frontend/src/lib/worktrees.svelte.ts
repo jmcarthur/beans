@@ -11,6 +11,7 @@ export interface Worktree {
   description: string | null;
   branch: string;
   path: string;
+  beanIds: string[];
   setupStatus: 'RUNNING' | 'DONE' | 'FAILED' | null;
   setupError: string | null;
 }
@@ -21,6 +22,7 @@ const WORKTREE_FIELDS = `
   description
   branch
   path
+  beans { id }
   setupStatus
   setupError
 `;
@@ -62,6 +64,16 @@ const WORKTREES_QUERY = gql`
   }
 `;
 
+/** Raw shape from GraphQL (beans come as objects with id) */
+interface RawWorktree extends Omit<Worktree, 'beanIds'> {
+  beans: { id: string }[];
+}
+
+function mapWorktree(raw: RawWorktree): Worktree {
+  const { beans, ...rest } = raw;
+  return { ...rest, beanIds: beans.map((b) => b.id) };
+}
+
 class WorktreeStore {
   worktrees = $state<Worktree[]>([]);
   initialized = $state(false);
@@ -75,7 +87,7 @@ class WorktreeStore {
 
     const { unsubscribe } = pipe(
       client.subscription(WORKTREES_SUBSCRIPTION, {}),
-      subscribe((result: { data?: { worktreesChanged?: Worktree[] }; error?: Error }) => {
+      subscribe((result: { data?: { worktreesChanged?: RawWorktree[] }; error?: Error }) => {
         if (result.error) {
           console.error('Worktree subscription error:', result.error);
           this.error = result.error.message;
@@ -85,7 +97,7 @@ class WorktreeStore {
 
         const wts = result.data?.worktreesChanged;
         if (wts) {
-          this.worktrees = wts;
+          this.worktrees = wts.map(mapWorktree);
           this.initialized = true;
         }
       })
@@ -115,7 +127,8 @@ class WorktreeStore {
       return null;
     }
 
-    const wt = result.data?.createWorktree ?? null;
+    const raw = result.data?.createWorktree ?? null;
+    const wt = raw ? mapWorktree(raw) : null;
 
     // Eagerly add to local state so the layout guard doesn't redirect
     // back to planning before the subscription delivers the update.
@@ -151,6 +164,11 @@ class WorktreeStore {
 
   hasWorktree(id: string): boolean {
     return this.worktrees.some((wt) => wt.id === id);
+  }
+
+  /** Return the worktree ID that contains the given bean, or null. */
+  worktreeForBean(beanId: string): string | null {
+    return this.worktrees.find((wt) => wt.beanIds.includes(beanId))?.id ?? null;
   }
 
   /** Fetch fresh git status for a specific worktree (on-demand, not cached). */
