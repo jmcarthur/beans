@@ -79,11 +79,15 @@
       <Sidebar />
     {/snippet}
 
+    {#snippet mainContent()}
+      {@render children()}
+    {/snippet}
+
     <SplitPane
       direction="horizontal"
       panels={[
         { content: sidebarPanel, size: 224, minSize: 150, maxSize: 400, persistKey: 'sidebar' },
-        { content: children }
+        { content: mainContent }
       ]}
     />
   {/if}

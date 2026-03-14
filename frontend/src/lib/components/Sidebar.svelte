@@ -163,8 +163,11 @@
               : 'border-border/50 bg-surface/50 hover:border-border hover:bg-surface'
           ]}
         >
-          <button
+          <div
             onclick={() => ui.navigateTo(item.id)}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.navigateTo(item.id); } }}
+            role="button"
+            tabindex="0"
             class={[
               'group flex w-full min-w-0 cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors',
               ui.activeView === item.id
@@ -210,7 +213,7 @@
                 </button>
               {/if}
             </div>
-          </button>
+          </div>
 
           {#if item.beans.length > 0}
             <div class="flex flex-col gap-0.5 px-3 pb-2">
