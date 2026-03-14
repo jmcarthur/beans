@@ -173,14 +173,16 @@
             <p class="whitespace-pre-wrap text-text">{msg.content}</p>
           </div>
         {:else if isRunning}
-          <div class="text-text-muted">
+          <div class="flex gap-2 text-text-muted">
+            <span class="shrink-0 select-none">&middot;</span>
             <span class="animate-pulse">{activityLabel}</span>
           </div>
         {/if}
       {/each}
 
       {#if isRunning && subagentActivities.length === 0 && (messages.length === 0 || messages[messages.length - 1].role === 'USER')}
-        <div class="text-text-muted">
+        <div class="flex gap-2 text-text-muted">
+          <span class="shrink-0 select-none">&middot;</span>
           <span class="animate-pulse">{activityLabel}</span>
         </div>
       {/if}
