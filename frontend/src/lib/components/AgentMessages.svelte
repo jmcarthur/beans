@@ -16,9 +16,17 @@
 
   let { messages, isRunning, activityLabel, subagentActivities, setupRunning = false }: Props = $props();
 
-  // Messages present at mount time are shown immediately (no animation).
-  // Only messages arriving after mount get the decrypt effect.
-  const initialMessageCount = messages.length;
+  // Track how many messages existed after the initial load so only
+  // genuinely new messages get the decrypt animation.  The prop may be
+  // empty at mount (data arrives via subscription), so we wait for the
+  // first non-empty snapshot before considering the component "settled".
+  let settledMessageCount = $state(-1);
+
+  $effect(() => {
+    if (settledMessageCount === -1 && messages.length > 0) {
+      settledMessageCount = messages.length;
+    }
+  });
 
   let messagesEl: HTMLDivElement | undefined = $state();
   let renderedMessages = $state<Map<string, string>>(new Map());
@@ -146,7 +154,7 @@
           </div>
         {:else if msg.role === 'INFO'}
           <div class="rounded-lg border border-border bg-surface px-3 py-2 text-text-muted">
-            <p class="whitespace-pre-wrap" use:decryptText={{ text: msg.content, immediate: i < initialMessageCount }}></p>
+            <p class="whitespace-pre-wrap" use:decryptText={{ text: msg.content, immediate: settledMessageCount === -1 || i < settledMessageCount }}></p>
           </div>
         {:else if msg.role === 'TOOL'}
           <div class="flex gap-2 text-text-faint">
@@ -158,10 +166,10 @@
                   onclick={() => toggleDiff(i)}
                 >
                   <span class="shrink-0 select-none">{expandedDiffs.has(i) ? '▾' : '▸'}</span>
-                  <span use:decryptText={{ text: msg.content, immediate: i < initialMessageCount }}></span>
+                  <span use:decryptText={{ text: msg.content, immediate: settledMessageCount === -1 || i < settledMessageCount }}></span>
                 </button>
               {:else}
-                <span use:decryptText={{ text: msg.content, immediate: i < initialMessageCount }}></span>
+                <span use:decryptText={{ text: msg.content, immediate: settledMessageCount === -1 || i < settledMessageCount }}></span>
               {/if}
               {#if msg.diff && expandedDiffs.has(i)}
                 <pre class="mt-1 max-h-64 overflow-auto rounded border border-border bg-surface-alt p-2 font-mono leading-relaxed">{#each msg.diff.split('\n') as line}<span class={diffLineClass(line)}>{line}

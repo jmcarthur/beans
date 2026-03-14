@@ -40,10 +40,42 @@
     }))
   ]);
 
-  // Items present at mount time are shown immediately (no animation).
-  // Only items appearing after mount get the decrypt effect.
-  const initialWorkspaceIds = new Set(worktreeStore.worktrees.map((wt) => wt.id));
-  const initialBeanIds = new Set(beansStore.all.filter((b) => b.worktreeId).map((b) => b.id));
+  // Track which items have been seen so only genuinely new items animate.
+  // Items present when stores finish their initial load are seeded into the
+  // set without animation; anything arriving afterwards gets the effect.
+  let seenWorkspaceIds = new Set<string>();
+  let seenBeanIds = new Set<string>();
+  let workspacesSettled = $state(false);
+  let beansSettled = $state(false);
+
+  $effect(() => {
+    if (!workspacesSettled && worktreeStore.initialized) {
+      // Seed with whatever is in the store at the end of initial load
+      seenWorkspaceIds = new Set(worktreeStore.worktrees.map((wt) => wt.id));
+      workspacesSettled = true;
+    }
+  });
+
+  $effect(() => {
+    if (!beansSettled && !beansStore.loading) {
+      seenBeanIds = new Set(beansStore.all.filter((b) => b.worktreeId).map((b) => b.id));
+      beansSettled = true;
+    }
+  });
+
+  function isWorkspaceSeen(id: string): boolean {
+    if (!workspacesSettled) return true; // still loading — skip animation
+    if (seenWorkspaceIds.has(id)) return true;
+    seenWorkspaceIds.add(id);
+    return false;
+  }
+
+  function isBeanSeen(id: string): boolean {
+    if (!beansSettled) return true;
+    if (seenBeanIds.has(id)) return true;
+    seenBeanIds.add(id);
+    return false;
+  }
 
   // Poll for uncommitted changes in the main repo and worktree integration readiness
   let mainHasChanges = $state(false);
@@ -184,7 +216,7 @@
               {#if item.settingUp}
                 <span class="block text-xs font-normal text-text-faint animate-pulse">Setting up...</span>
               {:else if item.description}
-                <span class="block text-xs font-normal text-text-faint" use:decryptText={{ text: item.description, immediate: initialWorkspaceIds.has(item.id) }}></span>
+                <span class="block text-xs font-normal text-text-faint" use:decryptText={{ text: item.description, immediate: isWorkspaceSeen(item.id) }}></span>
               {/if}
             </div>
             <div class="relative ml-auto h-4 w-4 shrink-0 self-start mt-0.5">
@@ -232,7 +264,7 @@
                     typeBorders[wtBean.type] ?? 'border-l-type-task-border'
                   ]}
                 >
-                  <span class="min-w-0 flex-1 text-xs text-text-muted" use:decryptText={{ text: wtBean.title, immediate: initialBeanIds.has(wtBean.id) }}></span>
+                  <span class="min-w-0 flex-1 text-xs text-text-muted" use:decryptText={{ text: wtBean.title, immediate: isBeanSeen(wtBean.id) }}></span>
                 </button>
               {/each}
             </div>
