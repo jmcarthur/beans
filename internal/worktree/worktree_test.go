@@ -40,10 +40,11 @@ func initTestRepo(t *testing.T) (repoDir, beansDir string) {
 
 func TestParsePorcelain(t *testing.T) {
 	tests := []struct {
-		name string
-		input string
-		want int
-		id   string
+		name         string
+		input        string
+		worktreesDir string
+		want         int
+		id           string
 	}{
 		{
 			name:  "empty",
@@ -106,6 +107,32 @@ branch refs/heads/beans/beans-foo`,
 			id:   "beans-foo",
 		},
 		{
+			name:         "detached HEAD during rebase",
+			worktreesDir: "/home/user/project/.beans/.worktrees",
+			input: `worktree /home/user/project
+HEAD abc123
+branch refs/heads/main
+
+worktree /home/user/project/.beans/.worktrees/beans-rebasing
+HEAD def456
+detached
+
+`,
+			want: 1,
+			id:   "beans-rebasing",
+		},
+		{
+			name:         "detached HEAD without worktreesDir is skipped",
+			worktreesDir: "",
+			input: `worktree /some/path
+HEAD def456
+detached
+
+`,
+			want: 0,
+			id:   "",
+		},
+		{
 			name: "prunable entry is skipped",
 			input: `worktree /home/user/project
 HEAD abc123
@@ -128,7 +155,7 @@ branch refs/heads/beans/beans-good
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parsePorcelain(tt.input)
+			got := parsePorcelain(tt.input, tt.worktreesDir)
 			if len(got) != tt.want {
 				t.Fatalf("got %d worktrees, want %d", len(got), tt.want)
 			}

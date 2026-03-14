@@ -149,7 +149,8 @@ func (m *Manager) List() ([]Worktree, error) {
 		return nil, fmt.Errorf("git worktree list: %w", err)
 	}
 
-	worktrees := parsePorcelain(string(out))
+	worktreesDir := filepath.Join(m.beansDir, ".worktrees")
+	worktrees := parsePorcelain(string(out), worktreesDir)
 
 	// Enrich with metadata (name, description for standalone worktrees)
 	for i := range worktrees {
@@ -190,23 +191,44 @@ func (m *Manager) List() ([]Worktree, error) {
 // parsePorcelain parses `git worktree list --porcelain` output and returns
 // worktrees whose branch starts with the beans prefix.
 // Entries marked as "prunable" (stale/missing directory) are skipped.
-func parsePorcelain(output string) []Worktree {
+// worktreesDir is the path to the beans worktrees directory (e.g. ".beans/.worktrees/"),
+// used to identify beans-managed worktrees that are temporarily detached (e.g. during rebase).
+func parsePorcelain(output string, worktreesDir string) []Worktree {
 	var worktrees []Worktree
 	var currentPath, currentBranch string
-	var prunable bool
+	var prunable, detached bool
 
 	emit := func() {
-		if !prunable && currentPath != "" && strings.HasPrefix(currentBranch, branchPrefix) {
+		if prunable || currentPath == "" {
+			currentPath = ""
+			currentBranch = ""
+			prunable = false
+			detached = false
+			return
+		}
+
+		if strings.HasPrefix(currentBranch, branchPrefix) {
+			// Normal case: branch is on a beans/ branch
 			id := strings.TrimPrefix(currentBranch, branchPrefix)
 			worktrees = append(worktrees, Worktree{
-				ID: id,
+				ID:     id,
 				Branch: currentBranch,
 				Path:   currentPath,
 			})
+		} else if detached && worktreesDir != "" && strings.HasPrefix(currentPath, worktreesDir) {
+			// Detached HEAD (e.g. during rebase) — identify by path
+			id := filepath.Base(currentPath)
+			worktrees = append(worktrees, Worktree{
+				ID:     id,
+				Branch: branchPrefix + id,
+				Path:   currentPath,
+			})
 		}
+
 		currentPath = ""
 		currentBranch = ""
 		prunable = false
+		detached = false
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -217,10 +239,13 @@ func parsePorcelain(output string) []Worktree {
 			currentPath = strings.TrimPrefix(line, "worktree ")
 			currentBranch = ""
 			prunable = false
+			detached = false
 		} else if strings.HasPrefix(line, "branch ") {
 			ref := strings.TrimPrefix(line, "branch ")
 			// ref is like "refs/heads/beans/beans-abc1"
 			currentBranch = strings.TrimPrefix(ref, "refs/heads/")
+		} else if line == "detached" {
+			detached = true
 		} else if strings.HasPrefix(line, "prunable ") {
 			prunable = true
 		} else if line == "" {
@@ -478,7 +503,8 @@ func (m *Manager) findWorktreePathByID(id string) (string, error) {
 		return "", fmt.Errorf("git worktree list: %w", err)
 	}
 
-	for _, wt := range parsePorcelain(string(out)) {
+	worktreesDir := filepath.Join(m.beansDir, ".worktrees")
+	for _, wt := range parsePorcelain(string(out), worktreesDir) {
 		if wt.ID == id {
 			return wt.Path, nil
 		}
