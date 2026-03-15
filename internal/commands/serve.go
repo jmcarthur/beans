@@ -107,8 +107,27 @@ func runServer(port int, origins []string) error {
 		}
 		c.Next()
 	})
-	// Create worktree manager (worktrees stored inside .beans/worktrees/)
-	wtManager := worktree.NewManager(cfg.ConfigDir(), core.Root(), cfg.GetWorktreeBaseRef(), cfg.GetWorktreeSetup())
+	// Resolve worktree root directory (default: ~/.beans/worktrees/<project>/)
+	projectName := cfg.GetProjectName()
+	if projectName == "" {
+		projectName = filepath.Base(cfg.ConfigDir())
+	}
+	worktreeRoot, err := cfg.ResolveWorktreePath(projectName)
+	if err != nil {
+		return fmt.Errorf("failed to resolve worktree path: %w", err)
+	}
+	if err := os.MkdirAll(worktreeRoot, 0755); err != nil {
+		return fmt.Errorf("failed to create worktree directory %s: %w", worktreeRoot, err)
+	}
+	log.Printf("[beans] worktrees directory: %s", worktreeRoot)
+
+	// Warn if old in-repo worktrees directory exists
+	oldWorktreeDir := filepath.Join(core.Root(), ".worktrees")
+	if entries, err := os.ReadDir(oldWorktreeDir); err == nil && len(entries) > 0 {
+		log.Printf("[beans] WARNING: found old worktrees in %s — worktrees are now created in %s. You may want to recreate existing worktrees and remove the old directory.", oldWorktreeDir, worktreeRoot)
+	}
+
+	wtManager := worktree.NewManager(cfg.ConfigDir(), worktreeRoot, cfg.GetWorktreeBaseRef(), cfg.GetWorktreeSetup())
 
 	// Watch existing worktrees for bean changes
 	if existingWTs, err := wtManager.List(); err == nil {

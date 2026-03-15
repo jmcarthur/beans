@@ -50,7 +50,7 @@ type SetupDoneFunc func(worktreeID string, success bool, errMsg string)
 // Manager handles git worktree operations for a repository.
 type Manager struct {
 	repoRoot     string
-	beansDir     string
+	worktreeRoot string // directory where worktrees are created (e.g. ~/.beans/worktrees/<project>/)
 	baseRef      string
 	setupCommand string // shell command to run after worktree creation
 	mu           sync.RWMutex
@@ -73,11 +73,11 @@ type setupState struct {
 }
 
 // NewManager creates a new worktree manager for the given repository root.
-// beansDir is the path to the .beans directory where worktrees are stored.
+// worktreeRoot is the directory where worktrees are created (e.g. ~/.beans/worktrees/<project>/).
 // baseRef is the git ref to use as the starting point for new branches (e.g. "main").
 // setupCommand is an optional shell command to run inside new worktrees after creation.
-func NewManager(repoRoot, beansDir, baseRef, setupCommand string) *Manager {
-	return &Manager{repoRoot: repoRoot, beansDir: beansDir, baseRef: baseRef, setupCommand: setupCommand, setupStatuses: make(map[string]setupState)}
+func NewManager(repoRoot, worktreeRoot, baseRef, setupCommand string) *Manager {
+	return &Manager{repoRoot: repoRoot, worktreeRoot: worktreeRoot, baseRef: baseRef, setupCommand: setupCommand, setupStatuses: make(map[string]setupState)}
 }
 
 // RepoRoot returns the path to the main repository root.
@@ -149,8 +149,7 @@ func (m *Manager) List() ([]Worktree, error) {
 		return nil, fmt.Errorf("git worktree list: %w", err)
 	}
 
-	worktreesDir := filepath.Join(m.beansDir, ".worktrees")
-	worktrees := parsePorcelain(string(out), worktreesDir)
+	worktrees := parsePorcelain(string(out), m.worktreeRoot)
 
 	// Enrich with metadata (name, description for standalone worktrees)
 	for i := range worktrees {
@@ -191,7 +190,7 @@ func (m *Manager) List() ([]Worktree, error) {
 // parsePorcelain parses `git worktree list --porcelain` output and returns
 // worktrees whose branch starts with the beans prefix.
 // Entries marked as "prunable" (stale/missing directory) are skipped.
-// worktreesDir is the path to the beans worktrees directory (e.g. ".beans/.worktrees/"),
+// worktreesDir is the path to the beans worktrees directory (e.g. "~/.beans/worktrees/<project>/"),
 // used to identify beans-managed worktrees that are temporarily detached (e.g. during rebase).
 func parsePorcelain(output string, worktreesDir string) []Worktree {
 	var worktrees []Worktree
@@ -306,8 +305,8 @@ func (m *Manager) DetectBeanIDs(worktreePath string) []string {
 }
 
 // Create creates a new git worktree with the given name.
-// It generates a unique ID and stores the human-readable name as metadata.
-// The worktree is placed inside .beans/.worktrees/<id>.
+// It stores the human-readable name as metadata.
+// The worktree is placed in the configured worktree root directory.
 func (m *Manager) Create(name string) (*Worktree, error) {
 	if name == "" {
 		return nil, fmt.Errorf("worktree name must not be empty")
@@ -397,7 +396,7 @@ type worktreeMeta struct {
 
 // metaPath returns the path to the metadata file for a worktree ID.
 func (m *Manager) metaPath(id string) string {
-	return filepath.Join(m.beansDir, ".worktrees", id+".meta.json")
+	return filepath.Join(m.worktreeRoot, id+".meta.json")
 }
 
 // loadMeta loads the metadata for a worktree, if it exists.
@@ -503,8 +502,7 @@ func (m *Manager) findWorktreePathByID(id string) (string, error) {
 		return "", fmt.Errorf("git worktree list: %w", err)
 	}
 
-	worktreesDir := filepath.Join(m.beansDir, ".worktrees")
-	for _, wt := range parsePorcelain(string(out), worktreesDir) {
+	for _, wt := range parsePorcelain(string(out), m.worktreeRoot) {
 		if wt.ID == id {
 			return wt.Path, nil
 		}
@@ -513,7 +511,8 @@ func (m *Manager) findWorktreePathByID(id string) (string, error) {
 }
 
 // WorktreePath returns the filesystem path for a worktree with the given ID.
-// Worktrees are stored inside the .beans/.worktrees/ directory.
+// Worktrees are stored outside the main repo, in the configured worktree root
+// (default: ~/.beans/worktrees/<project>/).
 func (m *Manager) WorktreePath(id string) string {
-	return filepath.Join(m.beansDir, ".worktrees", id)
+	return filepath.Join(m.worktreeRoot, id)
 }

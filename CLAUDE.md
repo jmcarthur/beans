@@ -51,6 +51,7 @@ Key packages:
 
 # Worktree State Architecture
 
+- Git worktrees are created **outside** the main repo, in `~/.beans/worktrees/<project-name>/`. This avoids nested repo confusion and accidental tool/search interference. The location is configurable via `worktree.path` in `.beans.yml`.
 - `beans-serve` holds **runtime state** as the authoritative view of all beans. It initializes from main repo disk, then merges in changes from worktrees and the GraphQL API.
 - The CLI in a worktree uses the **worktree's local `.beans/`** directory — it does NOT redirect to the main repo. This means worktree agents' bean changes travel with their PR.
 - `beans-serve` watches active worktrees' `.beans/` dirs and merges file changes into runtime state as "dirty" (not persisted to main disk).

@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// initTestRepo creates a temporary git repo with an initial commit
-// and a .beans directory inside it.
-func initTestRepo(t *testing.T) (repoDir, beansDir string) {
+// initTestRepo creates a temporary git repo with an initial commit,
+// a .beans directory inside it, and a separate worktree root directory.
+func initTestRepo(t *testing.T) (repoDir, beansDir, worktreeRoot string) {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -35,7 +35,10 @@ func initTestRepo(t *testing.T) (repoDir, beansDir string) {
 		t.Fatalf("MkdirAll .beans: %v", err)
 	}
 
-	return dir, bd
+	// Create a separate worktree root directory (outside the repo)
+	wtRoot := t.TempDir()
+
+	return dir, bd, wtRoot
 }
 
 func TestParsePorcelain(t *testing.T) {
@@ -108,12 +111,12 @@ branch refs/heads/beans/beans-foo`,
 		},
 		{
 			name:         "detached HEAD during rebase",
-			worktreesDir: "/home/user/project/.beans/.worktrees",
+			worktreesDir: "/home/user/.beans/worktrees/project",
 			input: `worktree /home/user/project
 HEAD abc123
 branch refs/heads/main
 
-worktree /home/user/project/.beans/.worktrees/beans-rebasing
+worktree /home/user/.beans/worktrees/project/beans-rebasing
 HEAD def456
 detached
 
@@ -167,8 +170,8 @@ branch refs/heads/beans/beans-good
 }
 
 func TestCreateAndList(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// List should be empty initially
 	wts, err := mgr.List()
@@ -195,7 +198,7 @@ func TestCreateAndList(t *testing.T) {
 		t.Errorf("Branch = %q, want %q", wt.Branch, "beans/test-worktree")
 	}
 
-	expectedPath := filepath.Join(beansDir, ".worktrees", wt.ID)
+	expectedPath := filepath.Join(wtRoot, wt.ID)
 	if wt.Path != expectedPath {
 		t.Errorf("Path = %q, want %q", wt.Path, expectedPath)
 	}
@@ -222,8 +225,8 @@ func TestCreateAndList(t *testing.T) {
 }
 
 func TestCreateEmptyName(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	_, err := mgr.Create("")
 	if err == nil {
@@ -232,8 +235,8 @@ func TestCreateEmptyName(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	wt, err := mgr.Create("to-remove")
 	if err != nil {
@@ -260,8 +263,8 @@ func TestRemove(t *testing.T) {
 }
 
 func TestRemoveDirtyWorktree(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	wt, err := mgr.Create("dirty-wt")
 	if err != nil {
@@ -286,8 +289,8 @@ func TestRemoveDirtyWorktree(t *testing.T) {
 }
 
 func TestRemoveStaleWorktree(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// Create a worktree, then delete its directory out from under git
 	wt, err := mgr.Create("to-stale")
@@ -305,8 +308,8 @@ func TestRemoveStaleWorktree(t *testing.T) {
 }
 
 func TestRemoveNonexistent(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// Remove a worktree that doesn't exist should return an error
 	err := mgr.Remove("wt-nonexistent")
@@ -319,7 +322,7 @@ func TestRemoveNonexistent(t *testing.T) {
 }
 
 func TestCreateUsesBaseRef(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, _, wtRoot := initTestRepo(t)
 
 	// Create a second commit on a new branch so we have a distinct ref to branch from
 	commands := [][]string{
@@ -345,7 +348,7 @@ func TestCreateUsesBaseRef(t *testing.T) {
 	otherCommit := strings.TrimSpace(string(otherOut))
 
 	// Create a worktree manager with baseRef pointing to "other"
-	mgr := NewManager(repoDir, beansDir, "other", "")
+	mgr := NewManager(repoDir, wtRoot, "other", "")
 	wt, err := mgr.Create("baseref-test")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
@@ -366,8 +369,8 @@ func TestCreateUsesBaseRef(t *testing.T) {
 }
 
 func TestSubscription(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	ch := mgr.Subscribe()
 	defer mgr.Unsubscribe(ch)
@@ -399,7 +402,7 @@ func TestSubscription(t *testing.T) {
 }
 
 func TestDetectBeanIDs(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, beansDir, wtRoot := initTestRepo(t)
 
 	// Commit a file in .beans so the directory exists on main
 	if err := os.WriteFile(filepath.Join(beansDir, ".gitkeep"), []byte(""), 0644); err != nil {
@@ -408,7 +411,7 @@ func TestDetectBeanIDs(t *testing.T) {
 	gitRun(t, repoDir, "add", ".beans/.gitkeep")
 	gitRun(t, repoDir, "commit", "-m", "add .beans dir")
 
-	mgr := NewManager(repoDir, beansDir, "main", "")
+	mgr := NewManager(repoDir, wtRoot, "main", "")
 
 	// Create a worktree
 	wt, err := mgr.Create("detect-test")
@@ -474,8 +477,8 @@ func TestDetectBeanIDs(t *testing.T) {
 }
 
 func TestDetectBeanIDs_NoChanges(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "main", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "main", "")
 
 	// Create a worktree with no bean changes
 	wt, err := mgr.Create("no-changes")
@@ -490,7 +493,7 @@ func TestDetectBeanIDs_NoChanges(t *testing.T) {
 }
 
 func TestDetectBeanIDs_UncommittedChanges(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, beansDir, wtRoot := initTestRepo(t)
 
 	// Commit a file in .beans so the directory exists on main
 	if err := os.WriteFile(filepath.Join(beansDir, ".gitkeep"), []byte(""), 0644); err != nil {
@@ -499,7 +502,7 @@ func TestDetectBeanIDs_UncommittedChanges(t *testing.T) {
 	gitRun(t, repoDir, "add", ".beans/.gitkeep")
 	gitRun(t, repoDir, "commit", "-m", "add .beans dir")
 
-	mgr := NewManager(repoDir, beansDir, "main", "")
+	mgr := NewManager(repoDir, wtRoot, "main", "")
 
 	wt, err := mgr.Create("uncommitted-test")
 	if err != nil {
@@ -527,7 +530,7 @@ func TestDetectBeanIDs_UncommittedChanges(t *testing.T) {
 }
 
 func TestDetectBeanIDs_DeletedFile(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, beansDir, wtRoot := initTestRepo(t)
 
 	// Create a bean on main
 	if err := os.WriteFile(filepath.Join(beansDir, "beans-del1--to-delete.md"), []byte("---\ntitle: To Delete\nstatus: todo\ntype: task\n---\n"), 0644); err != nil {
@@ -536,7 +539,7 @@ func TestDetectBeanIDs_DeletedFile(t *testing.T) {
 	gitRun(t, repoDir, "add", "-A")
 	gitRun(t, repoDir, "commit", "-m", "add bean")
 
-	mgr := NewManager(repoDir, beansDir, "main", "")
+	mgr := NewManager(repoDir, wtRoot, "main", "")
 
 	wt, err := mgr.Create("delete-test")
 	if err != nil {
@@ -560,8 +563,8 @@ func TestDetectBeanIDs_DeletedFile(t *testing.T) {
 }
 
 func TestUpdateDescription(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// Create a worktree
 	wt, err := mgr.Create("desc-test")
@@ -604,10 +607,10 @@ func TestUpdateDescription(t *testing.T) {
 }
 
 func TestCreateRunsSetupCommand(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, _, wtRoot := initTestRepo(t)
 
 	// Use a setup command that creates a marker file
-	mgr := NewManager(repoDir, beansDir, "", "touch .setup-done")
+	mgr := NewManager(repoDir, wtRoot, "", "touch .setup-done")
 
 	// Track setup completion via callback
 	done := make(chan bool, 1)
@@ -654,10 +657,10 @@ func TestCreateRunsSetupCommand(t *testing.T) {
 }
 
 func TestCreateNoSetupCommand(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
+	repoDir, _, wtRoot := initTestRepo(t)
 
 	// No setup command — should still create fine
-	mgr := NewManager(repoDir, beansDir, "", "")
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	wt, err := mgr.Create("no-setup-test")
 	if err != nil {
@@ -671,8 +674,8 @@ func TestCreateNoSetupCommand(t *testing.T) {
 }
 
 func TestTouchLastActive(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// Create a worktree
 	wt, err := mgr.Create("touch-test")
@@ -715,8 +718,8 @@ func TestTouchLastActive(t *testing.T) {
 }
 
 func TestListSortsByLastActiveAt(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	// Create three worktrees
 	_, err := mgr.Create("wt-alpha")
@@ -768,8 +771,8 @@ func TestListSortsByLastActiveAt(t *testing.T) {
 }
 
 func TestCreateSetsLastActiveAt(t *testing.T) {
-	repoDir, beansDir := initTestRepo(t)
-	mgr := NewManager(repoDir, beansDir, "", "")
+	repoDir, _, wtRoot := initTestRepo(t)
+	mgr := NewManager(repoDir, wtRoot, "", "")
 
 	before := time.Now().UTC().Add(-time.Second)
 	_, err := mgr.Create("new-wt")

@@ -13,7 +13,7 @@ import (
 
 // worktreeWatcher tracks a single worktree's .beans/ directory.
 type worktreeWatcher struct {
-	worktreePath string // root of the worktree (e.g., .beans/.worktrees/<beanID>)
+	worktreePath string // root of the worktree (e.g., ~/.beans/worktrees/<project>/<id>)
 	beansDir     string // .beans/ dir inside the worktree
 	done         chan struct{}
 }

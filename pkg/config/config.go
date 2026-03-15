@@ -87,6 +87,11 @@ type WorktreeConfig struct {
 	// Default: "main"
 	BaseRef string `yaml:"base_ref,omitempty"`
 
+	// Path is the directory where worktrees are created.
+	// Default: ~/.beans/worktrees/<project-name>/
+	// Supports ~ for home directory.
+	Path string `yaml:"path,omitempty"`
+
 	// Setup is a shell command to run inside a worktree after creation (e.g. "pnpm install").
 	Setup string `yaml:"setup,omitempty"`
 
@@ -394,6 +399,11 @@ func (c *Config) toYAMLNode() *yaml.Node {
 		key.HeadComment = "Git ref to use as the base for new worktree branches (default: main)"
 		worktreeMapping.Content = append(worktreeMapping.Content, key, strNode(c.Worktree.BaseRef))
 	}
+	if c.Worktree.Path != "" {
+		key := strNode("path")
+		key.HeadComment = "Directory for worktrees (default: ~/.beans/worktrees/<project>/)"
+		worktreeMapping.Content = append(worktreeMapping.Content, key, strNode(c.Worktree.Path))
+	}
 	setupKey := strNode("setup")
 	setupKey.HeadComment = "Shell command to run inside a worktree after creation (e.g. \"pnpm install\")"
 	worktreeMapping.Content = append(worktreeMapping.Content, setupKey, strNode(c.Worktree.Setup))
@@ -636,6 +646,40 @@ func boolPtr(b bool) *bool { return &b }
 
 // DefaultWorktreeBaseRef is the default base ref for new worktree branches.
 const DefaultWorktreeBaseRef = "main"
+
+// ResolveWorktreePath returns the absolute path to the directory where worktrees
+// should be created. If worktree.path is configured, it is used (with ~ expansion).
+// Otherwise, defaults to ~/.beans/worktrees/<projectName>/.
+// projectName is used only when computing the default path.
+func (c *Config) ResolveWorktreePath(projectName string) (string, error) {
+	if c.Worktree.Path != "" {
+		return expandHome(c.Worktree.Path)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory: %w", err)
+	}
+	if projectName == "" {
+		projectName = "default"
+	}
+	return filepath.Join(home, ".beans", "worktrees", projectName), nil
+}
+
+// expandHome expands a leading ~ in a path to the user's home directory.
+func expandHome(path string) (string, error) {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, path[1:]), nil
+	}
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+	// Relative paths resolve against cwd
+	return filepath.Abs(path)
+}
 
 // GetWorktreeBaseRef returns the configured base ref for new worktree branches.
 // Returns "main" if not set.
