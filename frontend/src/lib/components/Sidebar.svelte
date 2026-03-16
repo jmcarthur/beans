@@ -106,12 +106,17 @@
   let confirmingRemoveId = $state<string | null>(null);
   let confirmingStatus = $state<WorktreeStatus | null>(null);
 
-  async function promptDestroy(id: string) {
-    // Fetch fresh status so warnings are accurate regardless of poll timing
-    const result = await client.query(WorktreeStatusesDocument, {}).toPromise();
-    const fresh = (result.data?.worktrees ?? []).find((wt) => wt.id === id);
-    confirmingStatus = fresh ? { hasChanges: fresh.hasChanges, hasUnmergedCommits: fresh.hasUnmergedCommits } : null;
+  function promptDestroy(id: string) {
+    // Show modal immediately with cached status, then refresh in background
+    confirmingStatus = worktreeStatuses.get(id) ?? null;
     confirmingRemoveId = id;
+    // Fetch fresh status so warnings update if cache was stale
+    client.query(WorktreeStatusesDocument, {}).toPromise().then((result) => {
+      const fresh = (result.data?.worktrees ?? []).find((wt) => wt.id === id);
+      if (confirmingRemoveId === id) {
+        confirmingStatus = fresh ? { hasChanges: fresh.hasChanges, hasUnmergedCommits: fresh.hasUnmergedCommits } : null;
+      }
+    });
   }
 
   async function handleCreateWorktree() {
