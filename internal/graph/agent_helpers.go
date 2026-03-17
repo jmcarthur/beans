@@ -276,7 +276,7 @@ REMINDER: Do NOT push anything to any remote. The integrate action is purely loc
 				return "Create PR"
 			}
 			if ctx.PullRequest.State == "merged" {
-				return "PR Merged"
+				return "PR Merged" // not visible, but keep a label for completeness
 			}
 			if ctx.HasChanges || ctx.HasUnpushedCommits {
 				return "Update PR"
@@ -299,11 +299,9 @@ REMINDER: Do NOT push anything to any remote. The integrate action is purely loc
 		PromptFunc: func(ctx actionContext) string {
 			cli := ctx.ForgeCLI
 			if ctx.PullRequest != nil {
-				// PR Merged — clean up
+				// PR Merged — no action needed; the destroy button handles cleanup
 				if ctx.PullRequest.State == "merged" {
-					return fmt.Sprintf(`The pull request %s has been merged successfully.
-
-Mark any associated beans as completed.`, ctx.PullRequest.URL)
+					return ""
 				}
 
 				// Fix Tests — checks failed, inspect and fix
@@ -327,12 +325,16 @@ After pushing, the checks will re-run automatically.`, ctx.PullRequest.URL, cli,
 
 Merge the PR using: %s pr merge %d
 
-Do NOT pass --squash, --rebase, or --merge flags — let the repository's merge settings decide the strategy.
+IMPORTANT: %s pr merge requires a merge strategy flag in non-interactive mode.
+Before merging, check which strategies are allowed on this repo:
+  %s repo view --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed
+Then pass the appropriate flag (--merge, --squash, or --rebase).
+
 Do NOT switch branches or check out main after merging — stay on the current branch.
 
 After merging:
 1. Report the merge result.
-2. Mark any associated beans as completed.`, ctx.PullRequest.URL, cli, ctx.PullRequest.Number)
+2. Mark any associated beans as completed.`, ctx.PullRequest.URL, cli, ctx.PullRequest.Number, cli, cli)
 				}
 
 				// Update PR — push latest commits
@@ -364,7 +366,11 @@ Push the latest changes to update it:
 			if ctx.PullRequest == nil {
 				return ctx.HasChanges || ctx.HasNewCommits
 			}
-			// PR exists — always show
+			// PR merged — hide; the destroy worktree button handles cleanup
+			if ctx.PullRequest.State == "merged" {
+				return false
+			}
+			// PR exists and not merged — show
 			return true
 		},
 		Disabled: func(ctx actionContext) string {

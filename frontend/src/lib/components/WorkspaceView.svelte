@@ -156,12 +156,13 @@
       {/if}
       {#if isWorktree}
         <button
-          class={["btn-toggle ml-1 cursor-pointer border-border bg-transparent text-text-muted", agentBusy ? "opacity-50" : "hover:text-danger"]}
-          title={agentBusy ? "Cannot destroy while agent is running" : "Destroy this worktree"}
+          class={["btn-toggle ml-1 cursor-pointer border-accent/30 bg-accent/10 text-accent", agentBusy ? "opacity-50" : "hover:bg-accent/20"]}
+          title={agentBusy ? "Cannot destroy while agent is running" : "Close this workspace"}
           disabled={agentBusy}
           onclick={() => (confirmingDestroy = true)}
         >
           <span class="icon-[uil--archive] size-4"></span>
+          Close Workspace
         </button>
       {/if}
     {/snippet}
