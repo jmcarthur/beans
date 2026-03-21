@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/hmans/beans/internal/agent"
-	"github.com/hmans/beans/internal/graph/model"
+	"github.com/hmans/beans/pkg/beangraph"
+	"github.com/hmans/beans/pkg/beangraph/model"
 	"github.com/hmans/beans/pkg/bean"
 	"github.com/hmans/beans/pkg/beancore"
 	"github.com/hmans/beans/pkg/config"
@@ -31,7 +32,7 @@ func setupTestResolver(t *testing.T) (*Resolver, *beancore.Core) {
 		t.Fatalf("failed to load core: %v", err)
 	}
 
-	return &Resolver{Core: core}, core
+	return &Resolver{CoreResolver: &beangraph.CoreResolver{Core: core}}, core
 }
 
 func createTestBean(t *testing.T, core *beancore.Core, id, title, status string) *bean.Bean {
@@ -1378,7 +1379,7 @@ func setupTestResolverWithPrefix(t *testing.T, prefix string) (*Resolver, *beanc
 		t.Fatalf("failed to load core: %v", err)
 	}
 
-	return &Resolver{Core: core}, core
+	return &Resolver{CoreResolver: &beangraph.CoreResolver{Core: core}}, core
 }
 
 // setupTestResolverWithRequireIfMatch creates a test resolver with require_if_match enabled.
@@ -1397,7 +1398,7 @@ func setupTestResolverWithRequireIfMatch(t *testing.T) (*Resolver, *beancore.Cor
 		t.Fatalf("failed to load core: %v", err)
 	}
 
-	return &Resolver{Core: core}, core
+	return &Resolver{CoreResolver: &beangraph.CoreResolver{Core: core}}, core
 }
 
 func TestETagValidation(t *testing.T) {
